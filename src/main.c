@@ -23,7 +23,8 @@ extern tSpiderFunction	gScript_Template_SetParam;
 extern tSpiderFunction	gScript_Template_Display;
 
 tSpiderVariant	gScriptVariant = {
-	"SpiderWeb", 0,
+	"SpiderWeb",
+	0, 1,	// Static Typed, Implicit casts allowed
 	NULL,	// Functions
 	0, NULL	// Constants
 };
@@ -54,7 +55,12 @@ int main(int argc, char *argv[])
 	}
 	
 	ret = SpiderScript_ExecuteMethod(script, "", 0, NULL);
-	printf("main: ret = %s\n", SpiderScript_DumpValue(ret));
+	{
+		char	*valStr = SpiderScript_DumpValue(ret);
+		printf("main: ret = %s\n", valStr);
+		free(valStr);
+	}
+	SpiderScript_FreeValue(ret);
 	SpiderScript_Free(script);
 	
 	return 0;
@@ -94,7 +100,7 @@ SCRIPT_METHOD("Template.SetParam", Template_SetParam, SS_DATATYPE_STRING, SS_DAT
  * \brief Display a template
  * \param file	String - File to display
  */
-SCRIPT_METHOD("Template.Display", Template_Display, SS_DATATYPE_STRING, SS_DATATYPE_DYNAMIC, 0)
+SCRIPT_METHOD("Template.Display", Template_Display, SS_DATATYPE_STRING, 0)
 {
 	return NULL;
 }

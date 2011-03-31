@@ -1,5 +1,5 @@
 # 
-# SpiderWeb - Web targeted SpiderScript varian
+# SpiderWeb - Web targeted SpiderScript variant
 #
 
 OBJ = main.o
