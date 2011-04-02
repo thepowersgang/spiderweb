@@ -1,4 +1,5 @@
 #!/bin/sw
+#<?php
 
 void myPrint(String $string)
 {
@@ -27,4 +28,12 @@ for( $val = 0; $val < 10; $val += 1 )
 }
 IO.Print("\n");
 
+Object $fp;	// TODO: Replace "Object" with a class definition
+// Maybe: "Object(IO.File) $fp"
+$fp = new IO.File("1.txt", "r");
+
+IO.Print( $fp->Read(100) );
+
 return 20;
+
+#?>

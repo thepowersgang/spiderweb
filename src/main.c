@@ -18,6 +18,7 @@ void	Script_int_System_IO_DestroyPtr(void *Data);
 void	SpiderWeb_AppendFunction(tSpiderFunction *Function);
 
 // === GLOBALS ===
+extern tSpiderObjectDef	g_obj_IO_File;
 extern tSpiderFunction	gScript_IO_Print;
 extern tSpiderFunction	gScript_Template_SetParam;
 extern tSpiderFunction	gScript_Template_Display;
@@ -25,8 +26,9 @@ extern tSpiderFunction	gScript_Template_Display;
 tSpiderVariant	gScriptVariant = {
 	"SpiderWeb",
 	0, 1,	// Static Typed, Implicit casts allowed
-	NULL,	// Functions
-	0, NULL	// Constants
+	NULL,	// Global (namespaceless) Functions
+	0, NULL,	// Global (namespaceless) Constants
+	{.Classes = &g_obj_IO_File}	// Root Namespace (.)
 };
 
 char	*gsScriptFile;
@@ -54,7 +56,7 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 	
-	ret = SpiderScript_ExecuteMethod(script, "", 0, NULL);
+	ret = SpiderScript_ExecuteFunction(script, NULL, "", 0, NULL);
 	{
 		char	*valStr = SpiderScript_DumpValue(ret);
 		printf("main: ret = %s\n", valStr);

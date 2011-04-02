@@ -2,10 +2,10 @@
 # SpiderWeb - Web targeted SpiderScript variant
 #
 
-OBJ = main.o
+OBJ = main.o fileio.o
 BIN = ../sw
 
-DEPFILES=$(OBJ:%.o=%.d)
+DEPFILES=$(OBJ:%=%.dep)
 
 CPPFLAGS = 
 CFLAGS = -Wall -Werror
@@ -23,5 +23,5 @@ $(BIN): $(OBJ)
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ -c $<
-	@$(CC) -M -MF $*.d $<
+	@$(CC) -M -MF $@.dep $<
 
