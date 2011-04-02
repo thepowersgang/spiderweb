@@ -1,5 +1,5 @@
 #!/bin/sw
-#<?php
+#<?php	// Hijack PHP's syntax hilighting
 
 void myPrint(String $string)
 {
