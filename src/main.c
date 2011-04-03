@@ -25,7 +25,7 @@ extern tSpiderFunction	gScript_Template_Display;
 
 tSpiderVariant	gScriptVariant = {
 	"SpiderWeb",
-	0, 0,	// Static Typed, Implicit casts not allowed
+	0, 1,	// Static Typed, Implicit casts allowed
 	NULL,	// Global (namespaceless) Functions
 	0, NULL,	// Global (namespaceless) Constants
 	{.Classes = &g_obj_IO_File}	// Root Namespace (.)
