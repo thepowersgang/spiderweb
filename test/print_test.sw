@@ -1,12 +1,14 @@
 #!/bin/sw
 #<?php	// Hijack PHP's syntax hilighting
 
+// Test function 1
 void printl(String $string)
 {
 	IO.Print($string);
 	IO.Print("\n");
 }
 
+// Test function 2
 Real some_random_function(Integer $func, Real $x)
 {
 	if( $func == 0 )
@@ -42,7 +44,7 @@ IO.Print("\n");
 	printl("f(" + $x + ") = " + some_random_function(3, $x));
 }
 
-// Test objects
+// Test objects and File IO
 Object $fp;	// TODO: Replace "Object" with a class definition
 // Maybe: "Object(IO.File) $fp"
 $fp = new IO.File("1.txt", "r");
