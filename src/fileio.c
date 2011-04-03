@@ -26,8 +26,8 @@ void	IO_File__destruct(tSpiderObject *This);
 DEF_OBJ_FCN(IO_File_Write, "Write", NULL, SS_DATATYPE_STRING, 0);
 DEF_OBJ_FCN(IO_File_Seek, "Seek", &g_fcn_IO_File_Write, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
 DEF_OBJ_FCN(IO_File_Read, "Read", &g_fcn_IO_File_Seek, SS_DATATYPE_INTEGER, 0);
-tSpiderObjectDef g_obj_IO_File = {
-	NULL, "IO.File",
+tSpiderObjectDef	g_obj_IO_File = {
+	NULL, "File",
 	IO_File__construct,	// Constructor - Open File
 	IO_File__destruct,
 	&g_fcn_IO_File_Read,	// First function

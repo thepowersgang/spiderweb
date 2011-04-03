@@ -29,7 +29,7 @@ printl("$val = " + (String)$val);
 
 // Test loops
 IO.Print("$val =");
-for( $val = 0; $val < 10; $val ++ )
+for ( $val = 0; $val < 10; $val ++ )
 {
 	IO.Print(" " + (String)$val);
 }
@@ -50,6 +50,30 @@ $fp = new IO.File("1.txt", "r");
 IO.Print("First 100 bytes of '1.txt':\n");
 IO.Print( $fp->Read(100) );
 IO.Print("\n----\n");
+
+// Test garbage collection of objects
+IO.Print("Writing a value to 2.txt...");
+$fp = new IO.File("2.txt", "w");
+$fp->Write("Hello There\n");
+$fp = null;
+IO.Print(" Done\n");
+
+Integer $i;
+for<outer>( $i = 0; $i < 10; $i ++ )
+{
+	IO.Print("\n$i = " + $i + ", ");
+	// Test break and continue in loops
+	for( $val = 0; $val < 20; $val ++ )
+	{
+		if($i == 8 && $val == 2)
+			continue outer;
+		
+		if( $val > 10 )	break;
+		if( $val > 5 && $val < 8)	continue;
+		IO.Print(" " + $val);
+	}
+}
+IO.Print("\n");
 
 // Test global return value
 return 20;

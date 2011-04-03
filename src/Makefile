@@ -2,14 +2,14 @@
 # SpiderWeb - Web targeted SpiderScript variant
 #
 
-OBJ = main.o fileio.o
+OBJ = main.o fileio.o template.o
 BIN = ../sw
 
 DEPFILES=$(OBJ:%=%.dep)
 
 CPPFLAGS = 
-CFLAGS = -Wall -Werror
-LDFLAGS = -lspiderscript
+CFLAGS = -Wall -Werror -g
+LDFLAGS = -lspiderscript -g
 
 .PHONY: all clean install
 
