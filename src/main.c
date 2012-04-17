@@ -20,12 +20,10 @@ extern tSpiderFunction	gScript_IO_Print;
 extern tSpiderFunction	gScript_IO_ReadLine;
 
 tSpiderNamespace	g_ns_IO = {
-	NULL,
-	NULL,	// Children
-	NULL,	// Functions
-	&g_obj_IO_File,	// Classes
-	0, NULL,
-	"IO"
+	.FirstChild = NULL,	// Children
+	.Functions = NULL,	// Functions
+	.Classes = &g_obj_IO_File,	// Classes
+	.Name = "IO"
 	};
 
 tSpiderVariant	gScriptVariant = {
