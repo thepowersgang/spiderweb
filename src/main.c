@@ -1,31 +1,28 @@
 /*
+ * SpiderWeb scripting suite
+ * - Interpreter core wrapper
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <spiderscript.h>
+#include "spiderweb_internal.h"
 
 // === MACROS ===
 #define ARRAY_SIZE(x)	((sizeof(x))/(sizeof((x)[0])))
 
-#define SCRIPT_METHOD(_scriptName, _ident, _args...)\
-	tSpiderValue	*Script_##_ident(tSpiderScript *Script, int NArgs, tSpiderValue **Args);\
-	tSpiderFunction	gScript_##_ident = {NULL,_scriptName,Script_##_ident,{_args}};\
-	tSpiderValue	*Script_##_ident(tSpiderScript *Script, int NArgs, tSpiderValue **Args)
-
 // === PROTOTYPES ===
 void	Script_int_System_IO_DestroyPtr(void *Data);
-void	SpiderWeb_AppendFunction(tSpiderFunction **ListHead, tSpiderFunction *Function);
 
 // === GLOBALS ===
 extern tSpiderObjectDef	g_obj_IO_File;
 extern tSpiderObjectDef	g_obj_Template;
 extern tSpiderFunction	gScript_IO_Print;
+extern tSpiderFunction	gScript_IO_ReadLine;
 
 tSpiderNamespace	g_ns_IO = {
 	NULL,
 	NULL,	// Children
-	&gScript_IO_Print,	// Functions
+	NULL,	// Functions
 	&g_obj_IO_File,	// Classes
 	0, NULL,
 	"IO"
@@ -54,18 +51,24 @@ int main(int argc, char *argv[])
 	
 	// TODO: Argument handling
 	gsScriptFile = argv[1];
-	
-	// Register functions
+
+	// TODO: Parse CGI values?
+	// - Maybe delay until CGI::ReadGET,CGI::ReadPOST are used	
+
+	// Prepare script engine
+	// - Register functions
 	SpiderWeb_AppendFunction(&g_ns_IO.Functions, &gScript_IO_Print);
+	SpiderWeb_AppendFunction(&g_ns_IO.Functions, &gScript_IO_ReadLine);
 	
-	// Parse file
+	// Parse Script file
 	script = SpiderScript_ParseFile(&gScriptVariant, gsScriptFile);
 	if( script == NULL ) {
 		fprintf(stderr, "ERROR: '%s' failed to parse\n", gsScriptFile);
 		return -1;
 	}
 	
-	ret = SpiderScript_ExecuteFunction(script, NULL, "", 0, NULL);
+	// Execute
+	ret = SpiderScript_ExecuteFunction(script, "", NULL, 0, NULL, NULL);
 	{
 		char	*valStr = SpiderScript_DumpValue(ret);
 		printf("\nmain: ret = %s\n", valStr);
@@ -110,8 +113,47 @@ SCRIPT_METHOD("Print", IO_Print, SS_DATATYPE_STRING, 0)
 	if(NArgs < 1)	return ERRPTR;
 	if(!Args[0] || Args[0]->Type != SS_DATATYPE_STRING)	return ERRPTR;
 	
+	// TODO: Send headers
+//	CGI_SendHeadersOnce();
+
 	fwrite(Args[0]->String.Data, Args[0]->String.Length, 1, stdout);
 	
+	return NULL;
+}
+
+SCRIPT_METHOD("ReadLine", IO_ReadLine, 0)
+{
+	tSpiderValue	*ret = NULL;
+	tSpiderValue	*tv;
+	char	tmpbuf[sizeof(*tv)+BUFSIZ];
+
+	tv = (void*)tmpbuf;
+	tv->Type = SS_DATATYPE_STRING;
+	tv->String.Data[0] = '\0';
+	tv->String.Length = 1;	
+
+	while( tv->String.Data[tv->String.Length-1] != '\n' )
+	{
+		fgets(tv->String.Data, BUFSIZ, stdin);
+
+		tv->String.Length = strlen(tv->String.Data);
+
+		if(ret) {
+			tSpiderValue	*new;
+			new = SpiderScript_StringConcat(ret, tv);
+			SpiderScript_FreeValue(ret);
+			ret = new;
+		}
+		else
+			ret = SpiderScript_CreateString(tv->String.Length, tv->String.Data);
+	}
+	
+	return ret;
+}
+
+SCRIPT_METHOD("ScanF", IO_ScanF, SS_DATATYPE_STRING, 0)
+{
+	// TODO: Implement
 	return NULL;
 }
 

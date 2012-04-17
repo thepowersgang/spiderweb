@@ -41,17 +41,28 @@ IO.Print("\n");
 {
 	Real $x = 10.0;
 	// Testing implicit casting
-	printl("f(" + $x + ") = " + some_random_function(3, $x));
+	printl(
+		"f("
+		+ $x
+		 + ") = "
+		 + some_random_function(3, $x)
+		);
 }
 
 // Test objects and File IO
 Object $fp;	// TODO: Replace "Object" with a class definition
 // Maybe: "Object(IO.File) $fp"
 $fp = new IO.File("1.txt", "r");
-
-IO.Print("First 100 bytes of '1.txt':\n");
-IO.Print( $fp->Read(100) );
-IO.Print("\n----\n");
+if( $fp )
+{
+	IO.Print("First 100 bytes of '1.txt':\n");
+	IO.Print( $fp->Read(100) );
+	IO.Print("\n----\n");
+}
+else
+{
+	IO.Print("Oops, no file 1.txt\n");
+}
 
 // Test garbage collection of objects
 IO.Print("Writing a value to 2.txt...");
@@ -70,7 +81,7 @@ for<outer>( $i = 0; $i < 10; $i ++ )
 		if($i == 8 && $val == 2)
 			continue outer;
 		
-		if( $val > 10 )	break;
+		if( $val > $i*2 )	break;
 		if( $val > 5 && $val < 8)	continue;
 		IO.Print(" " + $val);
 	}

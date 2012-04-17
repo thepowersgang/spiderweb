@@ -7,9 +7,9 @@ BIN = ../sw
 
 DEPFILES=$(OBJ:%=%.dep)
 
-CPPFLAGS = 
-CFLAGS = -Wall -Werror -g
-LDFLAGS = -lspiderscript -g
+CPPFLAGS += -I ..
+CFLAGS  += -Wall -Werror -g
+LDFLAGS += -L .. -lspiderscript -g
 
 .PHONY: all clean install
 
@@ -23,5 +23,5 @@ $(BIN): $(OBJ)
 
 %.o: %.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ -c $<
-	@$(CC) -M -MF $@.dep $<
+	@$(CC) $(CPPFLAGS) -M -MF $@.dep $<
 

@@ -94,6 +94,8 @@ tSpiderValue *Template_Display(tSpiderScript *Script, int nParams, tSpiderValue 
 {
 	if(nParams != 1)	return ERRPTR;
 	if(Parameters[0]->Type != SS_DATATYPE_STRING)	return ERRPTR;
+
+	// TODO: Send headers
 	
 	// Load template into memory
 	// Parse into some sort of structure for execution
