@@ -67,11 +67,13 @@ int main(int argc, char *argv[])
 	
 	// Execute
 	ret = SpiderScript_ExecuteFunction(script, "", NULL, 0, NULL, NULL);
+	#if 0
 	{
 		char	*valStr = SpiderScript_DumpValue(ret);
 		printf("\nmain: ret = %s\n", valStr);
 		free(valStr);
 	}
+	#endif
 	SpiderScript_FreeValue(ret);
 	SpiderScript_Free(script);
 	
@@ -128,7 +130,7 @@ SCRIPT_METHOD("ReadLine", IO_ReadLine, 0)
 	tv = (void*)tmpbuf;
 	tv->Type = SS_DATATYPE_STRING;
 	tv->String.Data[0] = '\0';
-	tv->String.Length = 1;	
+	tv->String.Length = 0;
 
 	while( tv->String.Data[tv->String.Length-1] != '\n' )
 	{
