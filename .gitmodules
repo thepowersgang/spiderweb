@@ -1,0 +1,3 @@
+[submodule "libspiderscript"]
+	path = libspiderscript
+	url = gitosis@cadel.mutabah.net:spiderscript.git
