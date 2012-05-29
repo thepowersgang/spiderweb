@@ -1,4 +1,4 @@
-#!/usb/bin/sw
+#!/usr/bin/sw
 #<?php
 
 // This script is to solve the first sample problem in the google CodeJam competion

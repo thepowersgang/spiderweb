@@ -8,10 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <spiderscript.h>
-
-#define DEF_OBJ_FCN(sym, name, next, args...) \
-	tSpiderValue	*sym(tSpiderScript *Script, int nParams, tSpiderValue **Parameters);\
-	tSpiderFunction g_fcn_##sym = {next,name,sym,{args}};
+#include "spiderweb_internal.h"
 
 // === TYPES ===
 typedef struct {
@@ -23,17 +20,18 @@ tSpiderObject	*IO_File__construct(int NArgs, tSpiderValue **Args);
 void	IO_File__destruct(tSpiderObject *This);
 
 // === GLOBALS ===
-DEF_OBJ_FCN(IO_File_Write, "Write", NULL, SS_DATATYPE_STRING, 0);
-DEF_OBJ_FCN(IO_File_Seek, "Seek", &g_fcn_IO_File_Write, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
-DEF_OBJ_FCN(IO_File_Read, "Read", &g_fcn_IO_File_Seek, SS_DATATYPE_INTEGER, 0);
+DEF_OBJ_FCN(IO_File_Write, "Write", NULL, SS_DATATYPE_INTEGER, SS_DATATYPE_STRING, 0);
+DEF_OBJ_FCN(IO_File_Seek, "Seek", IO_File_Write, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
+DEF_OBJ_FCN(IO_File_Read, "Read", IO_File_Seek, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
 tSpiderObjectDef	g_obj_IO_File = {
 	NULL, "File",
 	IO_File__construct,	// Constructor - Open File
 	IO_File__destruct,
+	NULL,	// Methods
 	&g_fcn_IO_File_Read,	// First function
 	1,
 	{
-		{"offset", 0},
+		{"offset", SS_DATATYPE_INTEGER, 0, 0},
 	}
 };
 

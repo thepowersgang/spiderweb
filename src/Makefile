@@ -25,3 +25,5 @@ $(BIN): $(OBJ)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ -c $<
 	@$(CC) $(CPPFLAGS) -M -MF $@.dep $<
 
+-include $(DEPFILES)
+

@@ -8,10 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <spiderscript.h>
-
-#define DEF_OBJ_FCN(sym, name, next, args...) \
-	tSpiderValue	*sym(tSpiderScript *Script, int nParams, tSpiderValue **Parameters);\
-	tSpiderFunction g_fcn_##sym = {next,name,sym,{args}};
+#include "spiderweb_internal.h"
 
 // === TYPES ===
 typedef struct s_map_entry	t_map_entry;
@@ -38,11 +35,12 @@ void	Template__destruct(tSpiderObject *This);
 void	Template_int_FreeMap(t_map_entry *FirstEntry);
 
 // === GLOBALS ===
-DEF_OBJ_FCN(Template_Display, "Display", NULL, SS_DATATYPE_STRING, 0);
+DEF_OBJ_FCN(Template_Display, "Display", NULL, SS_DATATYPE_UNDEF, SS_DATATYPE_STRING, 0);
 tSpiderObjectDef	g_obj_Template = {
 	NULL, "Template",
 	Template__construct,	// Constructor
 	Template__destruct,
+	NULL,	// Attributes
 	&g_fcn_Template_Display,	// First function
 	0,
 	{
