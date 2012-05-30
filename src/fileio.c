@@ -16,15 +16,15 @@ typedef struct {
 } t_obj_IO_File;
 
 // === PROTOTYPES ===
-tSpiderObject	*IO_File__construct(int NArgs, tSpiderValue **Args);
+tSpiderObject	*IO_File__construct(tSpiderScript *Script, int NArgs, tSpiderValue **Args);
 void	IO_File__destruct(tSpiderObject *This);
 
 // === GLOBALS ===
 DEF_OBJ_FCN(IO_File_Write, "Write", NULL, SS_DATATYPE_INTEGER, SS_DATATYPE_STRING, 0);
 DEF_OBJ_FCN(IO_File_Seek, "Seek", IO_File_Write, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
 DEF_OBJ_FCN(IO_File_Read, "Read", IO_File_Seek, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
-tSpiderObjectDef	g_obj_IO_File = {
-	NULL, "File",
+tSpiderClass	g_obj_IO_File = {
+	NULL, "IO@File",
 	IO_File__construct,	// Constructor - Open File
 	IO_File__destruct,
 	NULL,	// Methods
@@ -36,7 +36,7 @@ tSpiderObjectDef	g_obj_IO_File = {
 };
 
 // === CODE ===
-tSpiderObject *IO_File__construct(int NArgs, tSpiderValue **Args)
+tSpiderObject *IO_File__construct(tSpiderScript *Script, int NArgs, tSpiderValue **Args)
 {
 	tSpiderObject	*ret;
 	FILE	*fp;
@@ -49,7 +49,7 @@ tSpiderObject *IO_File__construct(int NArgs, tSpiderValue **Args)
 	fp = fopen(Args[0]->String.Data, Args[1]->String.Data);
 	if( !fp )	return NULL;
 	
-	ret = SpiderScript_AllocateObject(&g_obj_IO_File, sizeof(t_obj_IO_File));
+	ret = SpiderScript_AllocateObject(Script, &g_obj_IO_File, sizeof(t_obj_IO_File));
 	
 	((t_obj_IO_File*)ret->OpaqueData)->FP = fp;
 	ret->Attributes[0] = SpiderScript_CreateInteger(0);
@@ -73,9 +73,8 @@ tSpiderValue *IO_File_Read(tSpiderScript *Script, int nParams, tSpiderValue **Pa
 //	printf("IO_File_Read: (%p, %i, %p)\n", Script, nParams, Parameters);
 	
 	if( nParams != 2 )	return ERRPTR;
-	if( !Parameters[0] || Parameters[0]->Type != SS_DATATYPE_OBJECT
-	 || Parameters[0]->Object->Type != &g_obj_IO_File )
-		return ERRPTR;
+	
+	//TODO: Should 'this' be checked?
 	
 	if( !Parameters[1] )
 		return NULL;
@@ -104,10 +103,6 @@ tSpiderValue *IO_File_Seek(tSpiderScript *Script, int nParams, tSpiderValue **Pa
 	 int	dir;
 	
 	if( nParams != 3 )	return ERRPTR;
-	if( !Parameters[0]
-	 || Parameters[0]->Type != SS_DATATYPE_OBJECT
-	 || Parameters[0]->Object->Type != &g_obj_IO_File )
-		return ERRPTR;
 	this = Parameters[0]->Object;
 	info = this->OpaqueData;
 	
@@ -133,9 +128,6 @@ tSpiderValue *IO_File_Write(tSpiderScript *Script, int nParams, tSpiderValue **P
 	 int	ret_val;
 	
 	if( nParams != 2 )	return ERRPTR;
-	if( !Parameters[0] || Parameters[0]->Type != SS_DATATYPE_OBJECT
-	 || Parameters[0]->Object->Type != &g_obj_IO_File )
-		return ERRPTR;
 	
 	if( !Parameters[1] )
 		return NULL;

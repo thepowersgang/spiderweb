@@ -30,13 +30,13 @@ typedef struct {
 } t_obj_Template;
 
 // === PROTOTYPES ===
-tSpiderObject	*Template__construct(int NArgs, tSpiderValue **Args);
+tSpiderObject	*Template__construct(tSpiderScript *Script, int NArgs, tSpiderValue **Args);
 void	Template__destruct(tSpiderObject *This);
 void	Template_int_FreeMap(t_map_entry *FirstEntry);
 
 // === GLOBALS ===
 DEF_OBJ_FCN(Template_Display, "Display", NULL, SS_DATATYPE_UNDEF, SS_DATATYPE_STRING, 0);
-tSpiderObjectDef	g_obj_Template = {
+tSpiderClass	g_obj_Template = {
 	NULL, "Template",
 	Template__construct,	// Constructor
 	Template__destruct,
@@ -48,14 +48,14 @@ tSpiderObjectDef	g_obj_Template = {
 };
 
 // === CODE ===
-tSpiderObject *Template__construct(int NArgs, tSpiderValue **Args)
+tSpiderObject *Template__construct(tSpiderScript *Script, int NArgs, tSpiderValue **Args)
 {
 	tSpiderObject	*ret;
 	t_obj_Template	*info;
 	
 	if( NArgs != 0 )	return ERRPTR;
 	
-	ret = SpiderScript_AllocateObject(&g_obj_Template, sizeof(t_obj_Template));
+	ret = SpiderScript_AllocateObject(Script, &g_obj_Template, sizeof(t_obj_Template));
 	if(!ret)	return ERRPTR;
 	
 	info = ret->OpaqueData;
@@ -90,8 +90,8 @@ void Template_int_FreeMap(t_map_entry *FirstEntry)
 
 tSpiderValue *Template_Display(tSpiderScript *Script, int nParams, tSpiderValue **Parameters)
 {
-	if(nParams != 1)	return ERRPTR;
-	if(Parameters[0]->Type != SS_DATATYPE_STRING)	return ERRPTR;
+	if(nParams != 2)	return ERRPTR;
+	if(Parameters[1]->Type != SS_DATATYPE_STRING)	return ERRPTR;
 
 	// TODO: Send headers
 	

@@ -14,27 +14,18 @@
 void	Script_int_System_IO_DestroyPtr(void *Data);
 
 // === GLOBALS ===
-extern tSpiderObjectDef	g_obj_IO_File;
-extern tSpiderObjectDef	g_obj_Template;
+extern tSpiderClass	g_obj_IO_File;
+extern tSpiderClass	g_obj_Template;
 extern tSpiderFunction	gScript_IO_Print;
 extern tSpiderFunction	gScript_IO_ReadLine;
-
-tSpiderNamespace	g_ns_IO = {
-	.FirstChild = NULL,	// Children
-	.Functions = NULL,	// Functions
-	.Classes = &g_obj_IO_File,	// Classes
-	.Name = "IO"
-	};
 
 tSpiderVariant	gScriptVariant = {
 	"SpiderWeb",
 	0, 1,	// Static Typed, Implicit casts allowed
-	NULL,	// Global (namespaceless) Functions
-	0, NULL,	// Global (namespaceless) Constants
-	{	// Root Namespace (.)
-		.FirstChild = &g_ns_IO,
-		.Classes = &g_obj_Template
-	}
+	NULL,	// Functions
+	NULL,	// Classes
+	NULL,	// ReadConstant
+	0, {},	// Global (namespaceless) Constants
 };
 
 char	*gsScriptFile;
@@ -55,8 +46,13 @@ int main(int argc, char *argv[])
 
 	// Prepare script engine
 	// - Register functions
-	SpiderWeb_AppendFunction(&g_ns_IO.Functions, &gScript_IO_Print);
-	SpiderWeb_AppendFunction(&g_ns_IO.Functions, &gScript_IO_ReadLine);
+	SpiderWeb_AppendFunction(&gScript_IO_Print);
+	SpiderWeb_AppendFunction(&gScript_IO_ReadLine);
+	
+	// - Register classes (less elegant)
+	gScriptVariant.Classes = &g_obj_IO_File;
+	g_obj_IO_File.Next = &g_obj_Template;
+	g_obj_Template.Next = NULL;
 	
 	// Parse Script file
 	script = SpiderScript_ParseFile(&gScriptVariant, gsScriptFile);
@@ -80,9 +76,10 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void SpiderWeb_AppendFunction(tSpiderFunction **ListHead, tSpiderFunction *Function)
+void SpiderWeb_AppendFunction(tSpiderFunction *Function)
 {
 	tSpiderFunction	*fcn, *prev = NULL;
+	tSpiderFunction	**ListHead = NULL;
 	
 	if( ListHead == NULL ) {
 		ListHead = &gScriptVariant.Functions;
@@ -108,7 +105,7 @@ void SpiderWeb_AppendFunction(tSpiderFunction **ListHead, tSpiderFunction *Funct
 /**
  * \brief Sets a template parameter
  */
-SCRIPT_METHOD("Print", IO_Print, SS_DATATYPE_STRING, 0)
+SCRIPT_METHOD("IO@Print", IO_Print, SS_DATATYPE_STRING, 0)
 {
 	if(NArgs < 1)	return ERRPTR;
 	if(!Args[0] || Args[0]->Type != SS_DATATYPE_STRING)	return ERRPTR;

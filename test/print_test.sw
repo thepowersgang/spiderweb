@@ -50,7 +50,7 @@ IO.Print("\n");
 }
 
 // Test objects and File IO
-Object $fp;	// TODO: Replace "Object" with a class definition
+IO.File $fp;	// TODO: Replace "Object" with a class definition
 // Maybe: "Object(IO.File) $fp"
 $fp = new IO.File("1.txt", "r");
 if( $fp )
