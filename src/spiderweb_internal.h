@@ -4,10 +4,11 @@
 
 #include <spiderscript.h>
 
-#define SCRIPT_METHOD(_scriptName, _ident, _args...)\
+#define SCRIPT_METHOD_EX(_rv, _scriptName, _ident, _args...)\
 	tSpiderValue	*Script_##_ident(tSpiderScript *Script, int NArgs, tSpiderValue **Args);\
-	tSpiderFunction	gScript_##_ident = {NULL,_scriptName,Script_##_ident,SS_DATATYPE_DYNAMIC,{_args}};\
+	tSpiderFunction	gScript_##_ident = {NULL,_scriptName,Script_##_ident,_rv,{_args}};\
 	tSpiderValue	*Script_##_ident(tSpiderScript *Script, int NArgs, tSpiderValue **Args)
+#define SCRIPT_METHOD(_scriptName, _ident, _args...)	SCRIPT_METHOD_EX(SS_DATATYPE_DYNAMIC, _scriptName, _ident, _args)
 
 extern void	SpiderWeb_AppendFunction(tSpiderFunction **ListHead, tSpiderFunction *Function);
 

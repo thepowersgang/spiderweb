@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 	}
 	
 	// Execute
-	ret = SpiderScript_ExecuteFunction(script, "", NULL, 0, NULL, NULL);
+	ret = SpiderScript_ExecuteFunction(script, "", NULL, 0, NULL, NULL, 1);
 	#if 0
 	{
 		char	*valStr = SpiderScript_DumpValue(ret);
@@ -121,7 +121,7 @@ SCRIPT_METHOD("Print", IO_Print, SS_DATATYPE_STRING, 0)
 	return NULL;
 }
 
-SCRIPT_METHOD("ReadLine", IO_ReadLine, 0)
+SCRIPT_METHOD_EX(SS_DATATYPE_STRING, "ReadLine", IO_ReadLine, 0)
 {
 	tSpiderValue	*ret = NULL;
 	tSpiderValue	*tv;

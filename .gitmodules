@@ -1,3 +1,4 @@
 [submodule "libspiderscript"]
 	path = libspiderscript
 	url = git://git.mutabah.net/spiderscript.git
+	pushurl = gitosis@git.mutabah.net:spiderscript.git
