@@ -22,7 +22,7 @@ void	IO_File__destruct(tSpiderObject *This);
 // === GLOBALS ===
 DEF_OBJ_FCN(IO_File_Write, "Write", NULL, SS_DATATYPE_INTEGER, SS_DATATYPE_STRING, 0);
 DEF_OBJ_FCN(IO_File_Seek, "Seek", IO_File_Write, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
-DEF_OBJ_FCN(IO_File_Read, "Read", IO_File_Seek, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
+DEF_OBJ_FCN(IO_File_Read, "Read", IO_File_Seek, SS_DATATYPE_STRING, SS_DATATYPE_INTEGER, 0);
 tSpiderClass	g_obj_IO_File = {
 	NULL, "IO@File",
 	IO_File__construct,	// Constructor - Open File
@@ -40,8 +40,9 @@ tSpiderObject *IO_File__construct(tSpiderScript *Script, int NArgs, tSpiderValue
 {
 	tSpiderObject	*ret;
 	FILE	*fp;
-	
-	if( NArgs != 2 )	return ERRPTR;
+
+	if( NArgs != 2 )
+		return ERRPTR;
 	if( Args[0]->Type != SS_DATATYPE_STRING || Args[1]->Type != SS_DATATYPE_STRING )
 		return ERRPTR;
 	

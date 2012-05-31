@@ -107,7 +107,9 @@ void SpiderWeb_AppendFunction(tSpiderFunction *Function)
  */
 SCRIPT_METHOD("IO@Print", IO_Print, SS_DATATYPE_STRING, 0)
 {
+//	printf("NArgs = %i\n", NArgs);
 	if(NArgs < 1)	return ERRPTR;
+//	printf("Args[0] = Type%i\n", Args[0] ? Args[0]->Type : 0);
 	if(!Args[0] || Args[0]->Type != SS_DATATYPE_STRING)	return ERRPTR;
 	
 	// TODO: Send headers
@@ -118,7 +120,7 @@ SCRIPT_METHOD("IO@Print", IO_Print, SS_DATATYPE_STRING, 0)
 	return NULL;
 }
 
-SCRIPT_METHOD_EX(SS_DATATYPE_STRING, "ReadLine", IO_ReadLine, 0)
+SCRIPT_METHOD_EX(SS_DATATYPE_STRING, "IO@ReadLine", IO_ReadLine, 0)
 {
 	tSpiderValue	*ret = NULL;
 	tSpiderValue	*tv;
@@ -148,7 +150,7 @@ SCRIPT_METHOD_EX(SS_DATATYPE_STRING, "ReadLine", IO_ReadLine, 0)
 	return ret;
 }
 
-SCRIPT_METHOD("ScanF", IO_ScanF, SS_DATATYPE_STRING, 0)
+SCRIPT_METHOD("IO@ScanF", IO_ScanF, SS_DATATYPE_STRING, 0)
 {
 	// TODO: Implement
 	return NULL;
