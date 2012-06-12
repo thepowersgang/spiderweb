@@ -60,9 +60,7 @@ tSpiderObject *IO_File__construct(tSpiderScript *Script, int NArgs, tSpiderValue
 void IO_File__destruct(tSpiderObject *This)
 {
 	t_obj_IO_File	*info = This->OpaqueData;
-	SpiderScript_FreeValue( This->Attributes[0] );
 	fclose( info->FP );
-	free( This );
 }
 
 tSpiderValue *IO_File_Read(tSpiderScript *Script, int nParams, tSpiderValue **Parameters)

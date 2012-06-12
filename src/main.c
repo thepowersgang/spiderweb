@@ -6,12 +6,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include "spiderweb_internal.h"
+#include <sys/stat.h>
 
 // === MACROS ===
 #define ARRAY_SIZE(x)	((sizeof(x))/(sizeof((x)[0])))
 
 // === PROTOTYPES ===
-void	Script_int_System_IO_DestroyPtr(void *Data);
+ int	ParseArguments(int argc, char *argv[]);
 
 // === GLOBALS ===
 extern tSpiderClass	g_obj_IO_File;
@@ -29,17 +30,20 @@ tSpiderVariant	gScriptVariant = {
 };
 
 char	*gsScriptFile;
+char	*gsCacheFile;
+ int	gbCacheCompiled;
 
 /**
  * \brief Program Entrypoint
  */
 int main(int argc, char *argv[])
 {
-	tSpiderScript	*script;
+	 int	rv;
+	tSpiderScript	*script = NULL;
 	tSpiderValue	*ret;
 	
-	// TODO: Argument handling
-	gsScriptFile = argv[1];
+	rv = ParseArguments(argc, argv);
+	if( rv )	return rv;
 
 	// TODO: Parse CGI values?
 	// - Maybe delay until CGI::ReadGET,CGI::ReadPOST are used	
@@ -53,26 +57,82 @@ int main(int argc, char *argv[])
 	gScriptVariant.Classes = &g_obj_IO_File;
 	g_obj_IO_File.Next = &g_obj_Template;
 	g_obj_Template.Next = NULL;
-	
-	// Parse Script file
-	script = SpiderScript_ParseFile(&gScriptVariant, gsScriptFile);
-	if( script == NULL ) {
-		fprintf(stderr, "ERROR: '%s' failed to parse\n", gsScriptFile);
-		return -1;
+
+	if( gbCacheCompiled )
+	{
+		struct stat cache_info;
+		struct stat source_info;
+
+		gsCacheFile = malloc( strlen(gsScriptFile) + sizeof(".csw") + 1 );
+		strcpy(gsCacheFile, gsScriptFile);
+		strcat(gsCacheFile, ".csw");
+
+		if( stat(gsScriptFile, &source_info) ) {
+			fprintf(stderr, "Unable to stat(2) '%s'\n", gsScriptFile);
+			perror("Opening source file");
+			return -1;
+		}
+		
+		if( stat(gsCacheFile, &cache_info) == 0 )
+		{
+			if( cache_info.st_mtime > source_info.st_mtime ) {
+				script = SpiderScript_LoadBytecode(&gScriptVariant, gsCacheFile);
+				if( !script ) {
+					fprintf(stderr, "Loading bytecode from '%s' failed\n", gsCacheFile);
+				}
+			}
+		}
 	}
 	
+	if( !script )
+	{
+		// Parse Script file
+		script = SpiderScript_ParseFile(&gScriptVariant, gsScriptFile);
+		if( script == NULL ) {
+			fprintf(stderr, "ERROR: '%s' failed to parse\n", gsScriptFile);
+			return -1;
+		}
+	
+		// Cache compiled version
+		if( gbCacheCompiled )
+		{
+			SpiderScript_SaveBytecode(script, gsCacheFile);
+		}
+	}
+
 	// Execute
 	ret = SpiderScript_ExecuteFunction(script, "", NULL, 0, NULL, NULL, 1);
-	#if 0
-	{
-		char	*valStr = SpiderScript_DumpValue(ret);
-		printf("\nmain: ret = %s\n", valStr);
-		free(valStr);
-	}
-	#endif
 	SpiderScript_FreeValue(ret);
 	SpiderScript_Free(script);
 	
+	return 0;
+}
+
+int ParseArguments(int argc, char *argv[])
+{
+	 int	i;
+	for( i = 1; i < argc; i ++ )
+	{
+		char *arg = argv[i];
+		if( arg[0] != '-' )
+		{
+			gsScriptFile = arg;
+		}
+		else if( arg[1] != '-' )
+		{
+			// Short arguments
+		}
+		else
+		{
+			// Long arguments
+			if( strcmp(arg, "--cache") == 0 ) {
+				gbCacheCompiled = 1;
+			}
+			else {
+				// *shrug*
+			}
+		}
+	}
 	return 0;
 }
 
@@ -155,10 +215,4 @@ SCRIPT_METHOD("IO@ScanF", IO_ScanF, SS_DATATYPE_STRING, 0)
 	// TODO: Implement
 	return NULL;
 }
-
-/*
-tSpiderFunction	gSystem_IO_Open = {NULL,"Sys.IO.Open", System_IO_Open, {SS_DATATYPE_STRING,0}};
-tSpiderFunction	gSystem_IO_IOCtl = {NULL,"Sys.IO.IOCtl", System_IO_IOCtl, {SS_DATATYPE_OPAQUE,SS_DATATYPE_INTEGER,SS_DATATYPE_STRING,0}};
-tSpiderFunction	gSystem_IO_Close = {NULL,"Sys.IO.Close", System_IO_Close, {SS_DATATYPE_OPAQUE,0}};
-*/
 
