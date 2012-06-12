@@ -16,18 +16,18 @@ typedef struct {
 } t_obj_IO_File;
 
 // === PROTOTYPES ===
-tSpiderObject	*IO_File__construct(tSpiderScript *Script, int NArgs, tSpiderValue **Args);
+FCN_PROTO(IO_File__construct);
 void	IO_File__destruct(tSpiderObject *This);
 
 // === GLOBALS ===
-DEF_OBJ_FCN(IO_File_Write, "Write", NULL, SS_DATATYPE_INTEGER, SS_DATATYPE_STRING, 0);
-DEF_OBJ_FCN(IO_File_Seek, "Seek", IO_File_Write, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
-DEF_OBJ_FCN(IO_File_Read, "Read", IO_File_Seek, SS_DATATYPE_STRING, SS_DATATYPE_INTEGER, 0);
+DEF_OBJ_FCN(IO_File_Write, "Write", NULL,          -2,SS_DATATYPE_INTEGER, SS_DATATYPE_STRING, 0);
+DEF_OBJ_FCN(IO_File_Seek,  "Seek",  IO_File_Write, -2,SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
+DEF_OBJ_FCN(IO_File_Read,  "Read",  IO_File_Seek,  -2,SS_DATATYPE_STRING, SS_DATATYPE_INTEGER, 0);
+tSpiderFunction	g_obj_IO_File__construct = {NULL,"",IO_File__construct,0,{SS_DATATYPE_STRING,SS_DATATYPE_STRING,0}};
 tSpiderClass	g_obj_IO_File = {
 	NULL, "IO@File",
-	IO_File__construct,	// Constructor - Open File
+	&g_obj_IO_File__construct,	// Constructor - Open File
 	IO_File__destruct,
-	NULL,	// Methods
 	&g_fcn_IO_File_Read,	// First function
 	1,
 	{
@@ -36,26 +36,31 @@ tSpiderClass	g_obj_IO_File = {
 };
 
 // === CODE ===
-tSpiderObject *IO_File__construct(tSpiderScript *Script, int NArgs, tSpiderValue **Args)
+FCN_PROTO(IO_File__construct)
 {
+	const tSpiderString	*filename, *mode;
 	tSpiderObject	*ret;
 	FILE	*fp;
 
 	if( NArgs != 2 )
-		return ERRPTR;
-	if( Args[0]->Type != SS_DATATYPE_STRING || Args[1]->Type != SS_DATATYPE_STRING )
-		return ERRPTR;
-	
+		return -1;
+	if( ArgTypes[0] != SS_DATATYPE_STRING || ArgTypes[1] != SS_DATATYPE_STRING )
+		return -1;
+
+	filename = Args[0];
+	mode = Args[1];
+
 	// TODO: Better validation of input data
-	fp = fopen(Args[0]->String.Data, Args[1]->String.Data);
-	if( !fp )	return NULL;
+	fp = fopen(filename->Data, mode->Data);
+	if( !fp )	return -1;
 	
 	ret = SpiderScript_AllocateObject(Script, &g_obj_IO_File, sizeof(t_obj_IO_File));
 	
 	((t_obj_IO_File*)ret->OpaqueData)->FP = fp;
-	ret->Attributes[0] = SpiderScript_CreateInteger(0);
+	*(tSpiderInteger*)ret->Attributes[0] = 0;
 	
-	return ret;
+	*(tSpiderObject**)RetData = ret;
+	return 0;
 }
 void IO_File__destruct(tSpiderObject *This)
 {
@@ -65,80 +70,71 @@ void IO_File__destruct(tSpiderObject *This)
 	free( This );
 }
 
-tSpiderValue *IO_File_Read(tSpiderScript *Script, int nParams, tSpiderValue **Parameters)
+FCN_PROTO(IO_File_Read)
 {
 	t_obj_IO_File	*info;
-	tSpiderObject	*this;
-	tSpiderValue	*val_size, *ret;
+	const tSpiderObject	*this;
+	const tSpiderInteger	*val_size;
+	tSpiderString	*ret;
 	
-//	printf("IO_File_Read: (%p, %i, %p)\n", Script, nParams, Parameters);
+	if( NArgs != 2 )
+		return -1;
+	if( ArgTypes[1] != SS_DATATYPE_INTEGER )
+		return -1;
 	
-	if( nParams != 2 )	return ERRPTR;
-	
-	//TODO: Should 'this' be checked?
-	
-	if( !Parameters[1] )
-		return NULL;
-	
-	val_size = SpiderScript_CastValueTo(SS_DATATYPE_INTEGER, Parameters[1]);
-	
-	this = Parameters[0]->Object;
+	this = Args[0];
+	val_size = Args[1];
 	info = this->OpaqueData;
 	
-	ret = SpiderScript_CreateString(val_size->Integer, NULL);
+	ret = SpiderScript_CreateString(*val_size, NULL);
+	ret->Length = fread(ret->Data, 1, *val_size, info->FP);
+	*(tSpiderString**)RetData = ret;
 	
-//	printf("Reading %li from %p\n", val_size->Integer, info->FP);
-	
-	ret->String.Length = fread(ret->String.Data, 1, val_size->Integer, info->FP);
-	
-	SpiderScript_FreeValue(val_size);
-	
-	return ret;
+	return SS_DATATYPE_STRING;
 }
 
-tSpiderValue *IO_File_Seek(tSpiderScript *Script, int nParams, tSpiderValue **Parameters)
+FCN_PROTO(IO_File_Seek)
 {
 	t_obj_IO_File	*info;
-	tSpiderObject	*this;
-	tSpiderValue	*val_offset, *val_dir;
+	const tSpiderObject	*this;
+	const tSpiderInteger	*val_offset, *val_dir;
 	 int	dir;
 	
-	if( nParams != 3 )	return ERRPTR;
-	this = Parameters[0]->Object;
+	if( NArgs != 3 )	return -1;
+	this = Args[0];
 	info = this->OpaqueData;
+	val_offset = Args[1];
+	val_dir = Args[2];
 	
-	if( !Parameters[1] || !Parameters[2] )
-		return NULL;
+	if(*val_dir < 0)	dir = SEEK_END;
+	if(*val_dir > 0)	dir = SEEK_SET;
+	if(*val_dir == 0)	dir = SEEK_CUR;
 	
-	val_offset = SpiderScript_CastValueTo(SS_DATATYPE_INTEGER, Parameters[1]);
-	val_dir = SpiderScript_CastValueTo(SS_DATATYPE_INTEGER, Parameters[2]);
-	
-	if(val_dir->Integer < 0)	dir = SEEK_END;
-	if(val_dir->Integer > 0)	dir = SEEK_SET;
-	if(val_dir->Integer == 0)	dir = SEEK_CUR;
-	
-	fseek(info->FP, val_offset->Integer, dir);
-	
-	return SpiderScript_CreateInteger( ftell(info->FP) );
+	fseek(info->FP, *val_offset, dir);
+
+	*(tSpiderInteger*)RetData = ftell(info->FP);
+	return SS_DATATYPE_INTEGER;
 }
-tSpiderValue *IO_File_Write(tSpiderScript *Script, int nParams, tSpiderValue **Parameters)
+
+FCN_PROTO(IO_File_Write)
 {
 	t_obj_IO_File	*info;
-	tSpiderObject	*this;
-	tSpiderValue	*val_data;
+	const tSpiderObject	*this;
+	const tSpiderString	*val_data;
 	 int	ret_val;
 	
-	if( nParams != 2 )	return ERRPTR;
+	if( NArgs != 2 )	return -1;
 	
-	if( !Parameters[1] )
-		return NULL;
+	if( !Args[1] )
+		return -1;
 	
-	val_data = SpiderScript_CastValueTo(SS_DATATYPE_STRING, Parameters[1]);
-	
-	this = Parameters[0]->Object;
+	this = Args[0];
 	info = this->OpaqueData;
+	val_data = Args[1];
 	
-	ret_val = fwrite(val_data->String.Data, 1, val_data->String.Length, info->FP);
+	ret_val = fwrite(val_data->Data, 1, val_data->Length, info->FP);
+	*(tSpiderInteger*)RetData = ret_val;
 	
-	return SpiderScript_CreateInteger(ret_val);
+	return SS_DATATYPE_INTEGER;
 }
+
