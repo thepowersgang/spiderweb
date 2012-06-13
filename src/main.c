@@ -35,7 +35,6 @@ char	*gsScriptFile;
  */
 int main(int argc, char *argv[])
 {
-	 int	rv;
 	tSpiderScript	*script = NULL;
 	
 	// TODO: Argument handling
@@ -102,10 +101,15 @@ void SpiderWeb_AppendFunction(tSpiderFunction *Function)
  */
 SCRIPT_METHOD("IO@Print", IO_Print, SS_DATATYPE_STRING, 0)
 {
-	printf("NArgs = %i\n", NArgs);
-	if(NArgs < 1)	return -1;
-	printf("Args[0] = Type%i\n", ArgTypes[0]);
-	if(!Args[0] || ArgTypes[0] != SS_DATATYPE_STRING)	return -1;
+	if(NArgs != 1) {
+		fprintf(stderr, "IO@Print - NArgs bad %i != 1\n", NArgs);
+		return -1;
+	}
+	if(!Args[0] || ArgTypes[0] != SS_DATATYPE_STRING) {
+		fprintf(stderr, "IO@Print - Args[0] 0x%x %p not SS_DATATYPE_STRING\n",
+			ArgTypes[0], Args[0]);
+		return -1;
+	}
 	
 	// TODO: Send headers
 //	CGI_SendHeadersOnce();

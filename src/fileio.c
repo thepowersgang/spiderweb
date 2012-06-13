@@ -20,9 +20,9 @@ FCN_PROTO(IO_File__construct);
 void	IO_File__destruct(tSpiderObject *This);
 
 // === GLOBALS ===
-DEF_OBJ_FCN(IO_File_Write, "Write", NULL,          -2,SS_DATATYPE_INTEGER, SS_DATATYPE_STRING, 0);
-DEF_OBJ_FCN(IO_File_Seek,  "Seek",  IO_File_Write, -2,SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
-DEF_OBJ_FCN(IO_File_Read,  "Read",  IO_File_Seek,  -2,SS_DATATYPE_STRING, SS_DATATYPE_INTEGER, 0);
+DEF_OBJ_FCN(IO_File_Write, "Write", NULL,          SS_DATATYPE_INTEGER, -2, SS_DATATYPE_STRING, 0);
+DEF_OBJ_FCN(IO_File_Seek,  "Seek",  IO_File_Write, SS_DATATYPE_INTEGER, -2,SS_DATATYPE_INTEGER, SS_DATATYPE_INTEGER, 0);
+DEF_OBJ_FCN(IO_File_Read,  "Read",  IO_File_Seek,  SS_DATATYPE_STRING,  -2,SS_DATATYPE_INTEGER, 0);
 tSpiderFunction	g_obj_IO_File__construct = {NULL,"",IO_File__construct,0,{SS_DATATYPE_STRING,SS_DATATYPE_STRING,0}};
 tSpiderClass	g_obj_IO_File = {
 	NULL, "IO@File",
@@ -50,9 +50,15 @@ FCN_PROTO(IO_File__construct)
 	filename = Args[0];
 	mode = Args[1];
 
+//	printf("fopen('%.*s', '%.*s')\n", (int)filename->Length, filename->Data, (int)mode->Length, mode->Data);
 	// TODO: Better validation of input data
+	// TODO: What if the strings aren't NULL terminated?
 	fp = fopen(filename->Data, mode->Data);
-	if( !fp )	return -1;
+	if( !fp ) {
+//		perror("Opening for script");
+		*(tSpiderObject**)RetData = NULL;
+		return 0;
+	}
 	
 	ret = SpiderScript_AllocateObject(Script, &g_obj_IO_File, sizeof(t_obj_IO_File));
 	
@@ -65,9 +71,7 @@ FCN_PROTO(IO_File__construct)
 void IO_File__destruct(tSpiderObject *This)
 {
 	t_obj_IO_File	*info = This->OpaqueData;
-	SpiderScript_FreeValue( This->Attributes[0] );
 	fclose( info->FP );
-	free( This );
 }
 
 FCN_PROTO(IO_File_Read)
@@ -123,10 +127,15 @@ FCN_PROTO(IO_File_Write)
 	const tSpiderString	*val_data;
 	 int	ret_val;
 	
-	if( NArgs != 2 )	return -1;
-	
-	if( !Args[1] )
+	if( NArgs != 2 ) {
+		fprintf(stderr, "IO@File.Write - NArgs bad %i != 2\n", NArgs);
 		return -1;
+	}
+	if( !Args[1] || ArgTypes[1] != SS_DATATYPE_STRING ) {
+		fprintf(stderr, "IO@File.Write - Args[1] 0x%x %p not SS_DATATYPE_STRING",
+			ArgTypes[1], Args[1]);
+		return -1;
+	}
 	
 	this = Args[0];
 	info = this->OpaqueData;

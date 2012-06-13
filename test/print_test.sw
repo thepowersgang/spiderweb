@@ -44,8 +44,8 @@ IO.Print("\n");
 	printl(
 		"f("
 		+ $x
-		 + ") = "
-		 + some_random_function(3, $x)
+		+ ") = "
+		+ some_random_function(3, $x)
 		);
 }
 
@@ -63,12 +63,13 @@ else
 {
 	IO.Print("Oops, no file 1.txt\n");
 }
+delete $fp;
 
 // Test garbage collection of objects
 IO.Print("Writing a value to 2.txt...");
 $fp = new IO.File("2.txt", "w");
 $fp->Write("Hello There\n");
-$fp = null;
+delete $fp;
 IO.Print(" Done\n");
 
 Integer $i;

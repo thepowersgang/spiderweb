@@ -5,6 +5,7 @@ Real pow(Real $value, Integer $power)
 {
 	Real $ret;
 	
+//	IO.Print("pow("+$value+","+$power+")\n");
 	if( $value == 0.0 )	return 0.0;
 	if( $power == 0 )	return 1.0;
 	
@@ -32,7 +33,7 @@ Real	$val;
 
 for( $i = 1; $i <= 100; $i += 1 )
 {
-	//IO.Print( "$i = " + (String)$i + "\n" );
+//	IO.Print( "$i = " + (String)(Real)$i + "\n" );
 	for( $pow = -3; $pow <= 3; $pow += 1 )
 	//for( $pow = 0; $pow <= 5; $pow += 1 )
 	{
