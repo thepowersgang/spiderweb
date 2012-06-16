@@ -1,8 +1,8 @@
 <!DOCTYPE xhtml>
 <html>
-<head>
-<title>{$PageTitle} - Acess OS Project</title>
-</head>
+ <head>
+  <title>{$PageTitle} - Acess OS Project</title>
+ </head>
 <body>
 <div id="pageheader">
  <h1>Acess OS Project</h1>
@@ -13,5 +13,5 @@
  <a href="history.ss" class="{?$PageID=="history"?"selected":""}">History</a>
 </div>
 
-<!-- vim: ft=html
--->
+{* vim: ft=html
+*}

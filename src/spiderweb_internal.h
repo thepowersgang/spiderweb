@@ -1,4 +1,7 @@
-
+/*
+ * SpiderWeb Scripting Language
+ * - By John Hodge (thePowersGang)
+ */
 #ifndef SPIDERWEB_INTERNAL_H_
 #define SPIDERWEB_INTERNAL_H_
 
@@ -19,6 +22,9 @@ extern void	SpiderWeb_AppendFunction(tSpiderFunction *Function);
 #define DEF_OBJ_FCN(sym, name, next, rettype, args...) \
 	FCN_PROTO(sym);\
 	FCN_DESC((void*)&g_fcn_##next,g_fcn_##sym,sym,name,rettype,args);
+
+
+extern void	CGI_SendHeadersOnce(void);
 
 #endif
 

@@ -2,7 +2,9 @@
 # SpiderWeb - Web targeted SpiderScript variant
 #
 
-OBJ = main.o fileio.o template.o
+OBJ = main.o fileio.o
+OBJ+= template/load.o template/object.o template/run.o template/common.o
+OBJ+= module_cgi.o
 BIN = ../sw
 
 DEPFILES=$(OBJ:%=%.dep)

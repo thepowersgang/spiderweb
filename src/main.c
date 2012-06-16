@@ -111,8 +111,8 @@ SCRIPT_METHOD("IO@Print", IO_Print, SS_DATATYPE_STRING, 0)
 		return -1;
 	}
 	
-	// TODO: Send headers
-//	CGI_SendHeadersOnce();
+	// Send headers
+	CGI_SendHeadersOnce();
 
 	const tSpiderString	*s = Args[0];
 	fwrite(s->Data, s->Length, 1, stdout);

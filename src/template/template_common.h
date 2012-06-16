@@ -8,7 +8,20 @@
 #ifndef _TEMPLATE_H_
 #define _TEMPLATE_H_
 
+#include <stddef.h>
+
 typedef struct s_map_entry	t_map_entry;
+typedef struct s_map	t_map;
+
+struct s_map {
+	t_map_entry	*FirstEnt;
+//	t_map_entry	*LastEnt;
+	// TODO: Hash table?
+};
+
+typedef struct {
+	t_map	ValueMap;
+} t_obj_Template;
 
 /**
  * \brief Key-Value Map
@@ -18,7 +31,7 @@ struct s_map_entry {
 	char	*Key;	// Key is stored after value
 	 int	Type;	// 0: Unset, 1 = Vector, 2: String
 	union {
-		t_map_entry	*FirstChild;
+		t_map	SubMap;
 		 int	Integer;
 		char	*String;
 	};
@@ -43,7 +56,10 @@ enum e_arithops
 	ARITHOP_CMPEQ, ARITHOP_CMPNE,
 	ARITHOP_CMPLT, ARITHOP_CMPGE,
 	ARITHOP_CMPGT, ARITHOP_CMPLE,
-	
+
+	ARITHOP_NOT,
+	ARITHOP_AND, ARITHOP_OR,
+		
 	ARITHOP_ADD, ARITHOP_SUB,
 	ARITHOP_MUL, ARITHOP_DIV,
 	ARITHOP_MOD,
@@ -53,10 +69,12 @@ enum e_arithops
 
 
 typedef union u_tplop  	t_tplop;
-typedef struct s_tplop_verb	t_tplop_verb;
+typedef struct s_tplop_const	t_tplop_const;
 typedef struct s_tplop_value	t_tplop_value;
+typedef struct s_tplop_output	t_tplop_output;
 typedef struct s_tplop_iter	t_tplop_iter;
 typedef struct s_tplop_cond	t_tplop_cond;
+typedef struct s_tplop_arith	t_tplop_arith;
 typedef struct s_template	t_template;
 
 #define S_TPLSEC_HDR	t_tplop *Next; enum e_tplop_types Type;
@@ -123,6 +141,13 @@ struct s_template
 };
 
 
+extern t_map_entry	*Template_int_GetMapItem(t_map *Map, const char *Key);
+extern t_map_entry	*Template_int_AddMapItem_String(t_map *Map, const char *Key, const char *String);
+extern void	Template_int_FreeMap(t_map *Map);
+
+extern void	Template_int_Unload(t_template *Template);
+extern t_template	*Template_int_Load(const char *Filename);
+extern void	Template_int_Output(t_obj_Template *State, t_template *Template);
 
 #endif
 
