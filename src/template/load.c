@@ -177,10 +177,15 @@ void Template_int_AppendOp(t_tplop **List, t_tplop *Ent)
 	
 	for( prev = *List; prev && prev->Next; prev = prev->Next )
 		;
-	if(prev)
+	if(prev) {
+//		printf("Placed %p at end of %p (prev=%p)\n", Ent, List, prev);
 		prev->Next = Ent;
-	else
+	}
+	else {
+//		printf("Placed %p as only in %p\n", Ent, List);
 		*List = Ent;
+	}
+	
 }
 
 t_tplop *Template_int_NewOutput(t_tplop *Value)
@@ -343,7 +348,14 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 	return DoExpr0();
 }
 
-t_tplop **Template_int_ParseStatement(t_tplop **List, const char *Data)
+#define NEST_STACK_SIZE	10
+typedef struct s_pstackent
+{
+	void	*Op;
+	t_tplop	**List;
+} t_pstackent;
+
+t_tplop **Template_int_ParseStatement(t_tplop **List, const char *Data, t_pstackent Stack[])
 {
 	tParser	parser_state = {0};
 	tParser	*Parser = &parser_state;
@@ -377,19 +389,22 @@ t_tplop **Template_int_ParseStatement(t_tplop **List, const char *Data)
 		cond->False = Template_int_NewOutput(Template_int_ParseExpr(&parser_state));		
 		assert( Template_int_GetToken(Parser) == TOK_EOF );
 	
-//		printf("cond = {Condition:%p,True:%p,False:%p}\n",
-//			cond->Condition, cond->True, cond->False);
-
 		Template_int_AppendOp(List, (t_tplop*)cond);
 		return List;
 	}
 
 	switch( Template_int_GetToken(&parser_state) )
 	{
-	#define CMPTOK(str)	(parser_state.CurState.TokenLen == sizeof(str) && strncmp(parser_state.CurState.TokenStr, str, parser_state.CurState.TokenLen) == 0)
+	#define CMPTOK(str)	(parser_state.CurState.TokenLen == sizeof(str)-1 && strncmp(parser_state.CurState.TokenStr, str, parser_state.CurState.TokenLen) == 0)
 	case TOK_IDENT:
+//		printf("ident '%.*s'\n", parser_state.CurState.TokenLen, parser_state.CurState.TokenStr);
 		// If block
 		if( CMPTOK("if") ) {
+			 int	i;
+			for(i = 0; i < NEST_STACK_SIZE && Stack[i].Op; i ++);
+			if(i == NEST_STACK_SIZE)	return NULL;
+//			printf("{if} block\n");
+			
 			t_tplop_cond	*cond;
 			cond = malloc( sizeof(*cond) );
 			cond->Type = TPLOP_CONDITIONAL;
@@ -398,12 +413,50 @@ t_tplop **Template_int_ParseStatement(t_tplop **List, const char *Data)
 			cond->Condition = Template_int_ParseExpr(Parser);
 			cond->True = NULL;
 			cond->False = NULL;
+			
+			Stack[i].Op = cond;
+			Stack[i].List = List;
+
+			Template_int_AppendOp(List, (t_tplop*)cond);
+
 			return &cond->True;
 		}
-		else if( CMPTOK("else") )
-			;	// Else condition
-		else if( CMPTOK("endif") )
-			;
+		else if( CMPTOK("else") ) {
+			 int	i;
+			for(i = 0; i < NEST_STACK_SIZE && Stack[i].Op; i ++);
+			if(i == 0) {
+				fprintf(stderr, "{else} with no matching {if}\n");
+				return NULL;
+			}
+			
+			t_tplop_cond	*cond = Stack[i-1].Op;
+			if(cond->Type != TPLOP_CONDITIONAL) {
+				fprintf(stderr, "{else} on non {if} block\n");
+				return NULL;
+			}
+			
+			if( cond->False || List == &cond->False ) {
+				fprintf(stderr, "Two {else} blocks\n");
+				return NULL;
+			}
+			return &cond->False;
+		}
+		else if( CMPTOK("endif") ) {
+			 int	i;
+			for(i = 0; i < NEST_STACK_SIZE && Stack[i].Op; i ++);
+			if(i == 0) {
+				fprintf(stderr, "{endif} with no matching {if}\n");
+				return NULL;
+			}
+			
+			t_tplop_cond	*cond = Stack[i-1].Op;
+			if(cond->Type != TPLOP_CONDITIONAL) {
+				fprintf(stderr, "{endif} terminates non {if} block\n");
+				return NULL;
+			}
+			Stack[i-1].Op = NULL;
+			return Stack[i-1].List;
+		}
 		// Foreach block
 		else if( CMPTOK("foreach") )
 			;
@@ -454,6 +507,8 @@ t_template *Template_int_Load(const char *Filename)
 	 int	i, j;
 	t_template	*ret;
 	t_tplop	**listhead;
+	t_pstackent	stack[NEST_STACK_SIZE];
+	memset(stack, 0, sizeof(stack));
 
 	fp = fopen(Filename, "r");
 	if( !fp ) {
@@ -527,7 +582,7 @@ t_template *Template_int_Load(const char *Filename)
 				ctrl_data = buffer + ctrl_start + 1;
 //				printf("Control statement: %s\n", ctrl_data);
 
-				listhead = Template_int_ParseStatement(listhead, ctrl_data);
+				listhead = Template_int_ParseStatement(listhead, ctrl_data, stack);
 				if( listhead == NULL ) {
 					fprintf(stderr, "Something bad happened\n");
 					fclose(fp);

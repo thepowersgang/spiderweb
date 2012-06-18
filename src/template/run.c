@@ -35,12 +35,23 @@ int Template_int_RunSec_Arith(t_obj_Template *State, struct s_tplop_arith *Arith
 	return 0;
 }
 
+void Template_int_RunSecList(t_obj_Template *State, t_tplop *First)
+{
+	t_tplop	*subsec;
+	void	*ptr;
+	for( subsec = First; subsec; subsec = subsec->Next )
+		Template_int_RunSec(State, subsec, &ptr);
+}
+
 int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr)
 {
 	 int	rv;
 	void	*ptr = NULL;
 	t_map_entry	*val;
-	
+
+	if( !Section )
+		return 0;	
+
 	switch(Section->Type)
 	{
 	case TPLOP_CONSTOUT:
@@ -72,14 +83,15 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 
 		Template_int_RunSec(State, Section->Conditional.Condition, &ptr);
 		if(ptr)
-			Template_int_RunSec(State, Section->Conditional.True, &ptr);
+			Template_int_RunSecList(State, Section->Conditional.True);
 		else
-			Template_int_RunSec(State, Section->Conditional.False, &ptr);
+			Template_int_RunSecList(State, Section->Conditional.False);
+//		printf("Section->Conditional = Done, res = %i\n", !!ptr);
 		return 0;
 	case TPLOP_ITERATOR:
 		rv = Template_int_RunSec(State, Section->Iterator.Array, &ptr);
 		if( rv != 1 || ptr == NULL ) {
-			Template_int_RunSec(State, Section->Iterator.IfEmpty, &ptr);
+			Template_int_RunSecList(State, Section->Iterator.IfEmpty);
 		}
 		else {
 			t_map_entry	*ent;
@@ -87,7 +99,7 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 			{
 				// TODO: Assign value into map according to stated name
 				// TODO: Run body for each entry
-				Template_int_RunSec(State, Section->Iterator.PerItem, &ptr);
+				Template_int_RunSecList(State, Section->Iterator.PerItem);
 			}
 		}
 		return 0;

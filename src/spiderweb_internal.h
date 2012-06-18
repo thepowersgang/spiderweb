@@ -24,6 +24,7 @@ extern void	SpiderWeb_AppendFunction(tSpiderFunction *Function);
 	FCN_DESC((void*)&g_fcn_##next,g_fcn_##sym,sym,name,rettype,args);
 
 
+extern void	Module_CGI_Initialise(void);
 extern void	CGI_SendHeadersOnce(void);
 
 #endif

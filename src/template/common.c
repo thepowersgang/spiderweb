@@ -79,6 +79,18 @@ void Template_int_FreeMap(t_map *Map)
 // --- Template Parsing ---
 void Template_int_FreeSec(t_tplop *Section)
 {
+	if(!Section)
+		return ;
+
+	void _freelist(t_tplop *First)
+	{
+		t_tplop	*sub, *next;
+		for( sub = First; sub; sub = next ) {
+			next = sub->Next;
+			Template_int_FreeSec(sub);
+		}
+	}	
+
 	switch(Section->Type)
 	{
 	case TPLOP_CONSTOUT:
@@ -92,13 +104,13 @@ void Template_int_FreeSec(t_tplop *Section)
 	
 	case TPLOP_CONDITIONAL:
 		Template_int_FreeSec(Section->Conditional.Condition);
-		Template_int_FreeSec(Section->Conditional.True);
-		Template_int_FreeSec(Section->Conditional.False);
+		_freelist(Section->Conditional.True);
+		_freelist(Section->Conditional.False);
 		break;
 	case TPLOP_ITERATOR:
-//		Template_int_FreeSec(Section->Conditional.Value);
-		Template_int_FreeSec(Section->Iterator.PerItem);
-		Template_int_FreeSec(Section->Iterator.IfEmpty);
+		Template_int_FreeSec(Section->Iterator.Array);
+		_freelist(Section->Iterator.PerItem);
+		_freelist(Section->Iterator.IfEmpty);
 		break;
 	case TPLOP_ARITH:
 		Template_int_FreeSec(Section->Arith.Left);

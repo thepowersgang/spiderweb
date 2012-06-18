@@ -33,12 +33,14 @@ char	*gsScriptFile;
 /**
  * \brief Program Entrypoint
  */
-int main(int argc, char *argv[])
+int main(int argc, char *argv[], char **envp)
 {
 	tSpiderScript	*script = NULL;
-	
+
 	// TODO: Argument handling
 	gsScriptFile = argv[1];
+
+	Module_CGI_Initialise();
 
 	// TODO: Parse CGI values?
 	// - Maybe delay until CGI::ReadGET,CGI::ReadPOST are used	

@@ -8,6 +8,7 @@ $tpl->Assign("PageID", "index");
 
 $tpl->Display("templates/header.tpl");
 $tpl->Display("templates/index.tpl");
+#IO.Print("Page ID = " + CGI.ReadGET("page") + "</br>\n");
 $tpl->Display("templates/footer.tpl");
 
 # vim: ft=php
