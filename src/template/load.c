@@ -146,6 +146,8 @@ int Template_int_GetToken(tParser *Parser)
 	// Used for the ternary hack
 	case '?':	rv = TOK_QUESTION;	break;
 	case ':':	rv = TOK_COLON; 	break;
+	
+	case '.':	rv = TOK_FIELD;	break;
 
 	case 'A'...'Z':
 	case 'a'...'z':
@@ -236,7 +238,7 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 		return (t_tplop*)ret;
 	}
 
-	auto t_tplop *DoExprB(void);
+	auto t_tplop *DoExprB(int bIdentAsString);
 	auto t_tplop *DoExpr0(void);
 	
 	t_tplop *DoExprVar(void)
@@ -247,7 +249,7 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 			switch( Template_int_GetToken(Parser) )
 			{
 			case TOK_FIELD:
-				vop = _BinOp(ARITHOP_FIELD, vop, DoExprB());
+				vop = _BinOp(ARITHOP_FIELD, vop, DoExprB(1));
 				break;
 			case TOK_SQUARE_O:
 				vop = _BinOp(ARITHOP_INDEX, vop, DoExpr0());
@@ -260,7 +262,7 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 		}
 	}
 
-	t_tplop *DoExprV(void)
+	t_tplop *DoExprV(int bIdentAsString)
 	{
 		switch( Template_int_GetToken(Parser) )
 		{
@@ -270,15 +272,20 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 			//return _Integer(Parser->CurState.TokenStr);
 		case TOK_STRING:
 			return _String(Parser->CurState.TokenStr+1, Parser->CurState.TokenLen-2);
+		case TOK_IDENT:
+			if( bIdentAsString )
+				return _String(Parser->CurState.TokenStr, Parser->CurState.TokenLen);
+			// Fallthrough, TODO: Impliment idents properly
 		default:
 			// TODO: Error
-			fprintf(stderr, "Expected value (string/variable), got %i\n",
-				Parser->CurState.Token);
+			fprintf(stderr, "Expected value (string/variable), got %i '%.*s'\n",
+				Parser->CurState.Token,
+				Parser->CurState.TokenLen, Parser->CurState.TokenStr);
 			return NULL;
 		}
 	}
 	
-	t_tplop *DoExprB(void)
+	t_tplop *DoExprB(int bIdentAsString)
 	{
 		if( Template_int_GetToken(Parser) == TOK_PAREN_O )
 		{
@@ -289,13 +296,13 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 		}
 		else {
 			Template_int_PutBack(Parser);
-			return DoExprV();
+			return DoExprV(bIdentAsString);
 		}
 	}
 
 	t_tplop *DoExpr2(void)
 	{
-		t_tplop *rv = DoExprB();
+		t_tplop *rv = DoExprB(0);
 		switch(Template_int_GetToken(Parser))
 		{
 		case TOK_NOT:	rv = _BinOp(ARITHOP_NOT, rv, NULL);	break;
@@ -348,14 +355,25 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 	return DoExpr0();
 }
 
-#define NEST_STACK_SIZE	10
-typedef struct s_pstackent
+#define MAX_BLOCK_DEPTH 	10
+#define MAX_INCLUDE_DEPTH	5
+typedef struct s_parsestate
 {
-	void	*Op;
-	t_tplop	**List;
-} t_pstackent;
+	 int	FStackPos;
+	struct {
+		char	*Filename;
+		FILE	*FP;
+	}	FStack[MAX_INCLUDE_DEPTH];
+	
+	 int	BStackPos;
+	struct {
+		void	*Op;
+		t_tplop	**List;
+	}	BStack[MAX_BLOCK_DEPTH];
+	t_tplop	**CurList;
+} t_parserstate;
 
-t_tplop **Template_int_ParseStatement(t_tplop **List, const char *Data, t_pstackent Stack[])
+t_tplop **Template_int_ParseStatement(t_parserstate *State, const char *Filename, const char *Data)
 {
 	tParser	parser_state = {0};
 	tParser	*Parser = &parser_state;
@@ -370,6 +388,7 @@ t_tplop **Template_int_ParseStatement(t_tplop **List, const char *Data, t_pstack
 	}
 
 	// Quick hack for 'ternary'
+	// TODO: Move to below
 	if( *Data == '?' )
 	{
 		t_tplop_cond	*cond;
@@ -378,7 +397,7 @@ t_tplop **Template_int_ParseStatement(t_tplop **List, const char *Data, t_pstack
 		cond->Type = TPLOP_CONDITIONAL;
 		cond->Next = NULL;
 
-		Parser->CurState.Pos ++;
+		assert( Template_int_GetToken(Parser) == TOK_QUESTION );
 	
 		cond->Condition = Template_int_ParseExpr(Parser);
 		assert( Template_int_GetToken(Parser) == TOK_QUESTION );
@@ -389,8 +408,8 @@ t_tplop **Template_int_ParseStatement(t_tplop **List, const char *Data, t_pstack
 		cond->False = Template_int_NewOutput(Template_int_ParseExpr(&parser_state));		
 		assert( Template_int_GetToken(Parser) == TOK_EOF );
 	
-		Template_int_AppendOp(List, (t_tplop*)cond);
-		return List;
+		Template_int_AppendOp(State->CurList, (t_tplop*)cond);
+		return State->CurList;
 	}
 
 	switch( Template_int_GetToken(&parser_state) )
@@ -398,12 +417,47 @@ t_tplop **Template_int_ParseStatement(t_tplop **List, const char *Data, t_pstack
 	#define CMPTOK(str)	(parser_state.CurState.TokenLen == sizeof(str)-1 && strncmp(parser_state.CurState.TokenStr, str, parser_state.CurState.TokenLen) == 0)
 	case TOK_IDENT:
 //		printf("ident '%.*s'\n", parser_state.CurState.TokenLen, parser_state.CurState.TokenStr);
+		if( CMPTOK("include") ) {
+			if( State->FStackPos == MAX_INCLUDE_DEPTH ) {
+				fprintf(stderr, "Maximum include depth exceeded\n");
+				return NULL;
+			}
+			// Get the filename
+			assert( Template_int_GetToken(Parser) == TOK_STRING );
+			const char	*fname_raw = Parser->CurState.TokenStr + 1;
+			 int	fname_raw_len = Parser->CurState.TokenLen - 2;
+			
+			// Get the path to the file (relative to the current file)
+			char	*newfile;
+			if( fname_raw[0] == '/' )
+				newfile = strndup(fname_raw, fname_raw_len);
+			else {
+				 int	pathlen = strlen(Filename);
+				while( pathlen && Filename[pathlen-1] != '/' )
+					pathlen --;
+				newfile = malloc( pathlen + fname_raw_len + 1 );
+				memcpy(newfile, Filename, pathlen);
+				memcpy(newfile+pathlen, fname_raw, fname_raw_len);
+				newfile[pathlen+fname_raw_len] = 0;
+			}
+		
+			// Open the new file	
+			State->FStack[State->FStackPos].FP = fopen(newfile, "r");
+			if( !State->FStack[State->FStackPos].FP ) {
+				fprintf(stderr, "Unable to open '%s'\n", newfile);
+				free(newfile);
+				return NULL;
+			}
+			State->FStack[State->FStackPos].Filename = newfile;
+			State->FStackPos ++;
+			return State->CurList;
+		}
 		// If block
-		if( CMPTOK("if") ) {
-			 int	i;
-			for(i = 0; i < NEST_STACK_SIZE && Stack[i].Op; i ++);
-			if(i == NEST_STACK_SIZE)	return NULL;
-//			printf("{if} block\n");
+		else if( CMPTOK("if") ) {
+			if(State->BStackPos == MAX_BLOCK_DEPTH) {
+				fprintf(stderr, "Maximum block depth exceeded\n");
+				return NULL;
+			}
 			
 			t_tplop_cond	*cond;
 			cond = malloc( sizeof(*cond) );
@@ -414,65 +468,121 @@ t_tplop **Template_int_ParseStatement(t_tplop **List, const char *Data, t_pstack
 			cond->True = NULL;
 			cond->False = NULL;
 			
-			Stack[i].Op = cond;
-			Stack[i].List = List;
+			State->BStack[State->BStackPos].Op = cond;
+			State->BStack[State->BStackPos].List = State->CurList;
+			State->BStackPos ++;
 
-			Template_int_AppendOp(List, (t_tplop*)cond);
+			Template_int_AppendOp(State->CurList, (t_tplop*)cond);
 
 			return &cond->True;
 		}
 		else if( CMPTOK("else") ) {
-			 int	i;
-			for(i = 0; i < NEST_STACK_SIZE && Stack[i].Op; i ++);
-			if(i == 0) {
+			if(State->BStackPos == 0) {
 				fprintf(stderr, "{else} with no matching {if}\n");
 				return NULL;
 			}
-			
-			t_tplop_cond	*cond = Stack[i-1].Op;
+			t_tplop_cond	*cond = State->BStack[State->BStackPos-1].Op;
 			if(cond->Type != TPLOP_CONDITIONAL) {
 				fprintf(stderr, "{else} on non {if} block\n");
 				return NULL;
 			}
 			
-			if( cond->False || List == &cond->False ) {
+			if( cond->False || State->CurList == &cond->False ) {
 				fprintf(stderr, "Two {else} blocks\n");
 				return NULL;
 			}
 			return &cond->False;
 		}
 		else if( CMPTOK("endif") ) {
-			 int	i;
-			for(i = 0; i < NEST_STACK_SIZE && Stack[i].Op; i ++);
-			if(i == 0) {
+			if(State->BStackPos == 0) {
 				fprintf(stderr, "{endif} with no matching {if}\n");
 				return NULL;
 			}
 			
-			t_tplop_cond	*cond = Stack[i-1].Op;
+			t_tplop_cond	*cond = State->BStack[State->BStackPos-1].Op;
 			if(cond->Type != TPLOP_CONDITIONAL) {
 				fprintf(stderr, "{endif} terminates non {if} block\n");
 				return NULL;
 			}
-			Stack[i-1].Op = NULL;
-			return Stack[i-1].List;
+			State->BStackPos --;
+			return State->BStack[State->BStackPos].List;
 		}
 		// Foreach block
 		else if( CMPTOK("foreach") )
-			;
+		{
+			if(State->BStackPos == MAX_BLOCK_DEPTH) {
+				fprintf(stderr, "Maximum block depth exceeded\n");
+				return NULL;
+			}
+			
+			t_tplop	*array = Template_int_ParseExpr(Parser);
+			assert( Template_int_GetToken(Parser) == TOK_IDENT );
+			assert( CMPTOK("as") );
+			assert( Template_int_GetToken(Parser) == TOK_VARIABLE );
+			
+			t_tplop_iter	*iter;
+			iter = malloc( sizeof(*iter) + Parser->CurState.TokenLen-1 + 1 );
+			iter->Type = TPLOP_ITERATOR;
+			iter->Next = NULL;
+			iter->Array = array;
+			iter->ItemName = (void*)(iter + 1);
+			memcpy(iter->ItemName, Parser->CurState.TokenStr+1, Parser->CurState.TokenLen-1);
+			iter->ItemName[Parser->CurState.TokenLen-1] = 0;
+			iter->PerItem = NULL;
+			iter->IfEmpty = NULL;
+			
+			State->BStack[State->BStackPos].Op = iter;
+			State->BStack[State->BStackPos].List = State->CurList;
+			State->BStackPos ++;
+
+			Template_int_AppendOp(State->CurList, (t_tplop*)iter);
+
+			return &iter->PerItem;
+		}
+		else if( CMPTOK("foreachelse") )
+		{
+			if(State->BStackPos == 0) {
+				fprintf(stderr, "{foreachelse} with no matching {foreach}\n");
+				return NULL;
+			}
+			t_tplop_iter	*iter = State->BStack[State->BStackPos-1].Op;
+			if(iter->Type != TPLOP_ITERATOR) {
+				fprintf(stderr, "{foreachelse} on non {foreach} block\n");
+				return NULL;
+			}
+			
+			if( iter->IfEmpty || State->CurList == &iter->IfEmpty ) {
+				fprintf(stderr, "Two {foreachelse} blocks\n");
+				return NULL;
+			}
+			return &iter->IfEmpty;
+		}
 		else if( CMPTOK("endforeach") )
-			;
+		{
+			if(State->BStackPos == 0) {
+				fprintf(stderr, "{endforeach} with no matching {foreach}\n");
+				return NULL;
+			}
+			
+			t_tplop_iter	*iter = State->BStack[State->BStackPos-1].Op;
+			if(iter->Type != TPLOP_ITERATOR) {
+				fprintf(stderr, "{endforeach} terminates non {foreach} block\n");
+				return NULL;
+			}
+			State->BStackPos --;
+			return State->BStack[State->BStackPos].List;
+		}
 		else {
 	default:
 			Template_int_PutBack(&parser_state);
 			// Output stuff
-			Template_int_AppendOp( List, Template_int_NewOutput( Template_int_ParseExpr(&parser_state) ) );
+			Template_int_AppendOp(State->CurList, Template_int_NewOutput( Template_int_ParseExpr(&parser_state) ));
 		}
 		break;
 	#undef CMPTOK
 	}
 
-	return List;
+	return State->CurList;
 }
 
 static void _addVerbatim(t_tplop **List, const char *Data, size_t Size)
@@ -503,15 +613,16 @@ t_template *Template_int_Load(const char *Filename)
 	 int	ofs;
 	 int	ctrl_end;
 	 int	ctrl_start;
-	FILE *fp;
+	FILE	*rootfp;
 	 int	i, j;
 	t_template	*ret;
-	t_tplop	**listhead;
-	t_pstackent	stack[NEST_STACK_SIZE];
-	memset(stack, 0, sizeof(stack));
+	t_parserstate	state;
+	
+	memset(&state, 0, sizeof(state));
 
-	fp = fopen(Filename, "r");
-	if( !fp ) {
+	// Open root template file
+	rootfp = fopen(Filename, "r");
+	if( !rootfp ) {
 		perror("Opening template");
 		return NULL;
 	}
@@ -520,16 +631,36 @@ t_template *Template_int_Load(const char *Filename)
 
 	ret = malloc( sizeof(*ret) );
 	ret->Sections = NULL;
-	listhead = &ret->Sections;
+	state.CurList = &ret->Sections;
 
 	ofs = 0;
 	for( ;; )
 	{
+		FILE	*fp;
+		const char	*thisfile;
+		if( state.FStackPos ) {
+			fp = state.FStack[ state.FStackPos - 1 ].FP;
+			thisfile = state.FStack[ state.FStackPos - 1 ].Filename;
+		}
+		else {
+			fp = rootfp;
+			thisfile = Filename;
+		}
+		
 		int len = fread(buffer + ofs, 1, BUFSIZ - ofs, fp);
-//		printf("Read %i to offset %i\n", len, ofs);
 
-		if( ofs == 0 && len == 0 ) {
-			break;	// Would this be an error?
+		// Zero read bytes is usually a problem...
+		if( len <= 0 && ofs != BUFSIZ ) {
+			if( ofs != 0 ) {
+				// TODO: Error?
+			}
+			if( state.FStackPos ) {
+				state.FStackPos --;
+				fclose(state.FStack[state.FStackPos].FP);
+				free(state.FStack[state.FStackPos].Filename);
+				continue ;
+			}
+			break;
 		}
 
 		ctrl_end = 0;
@@ -544,7 +675,7 @@ t_template *Template_int_Load(const char *Filename)
 				{
 					if( buffer[i+1] == '*' ) {
 						// Comment
-						_addVerbatim(listhead, buffer + ctrl_end, i - ctrl_end);
+						_addVerbatim(state.CurList, buffer + ctrl_end, i - ctrl_end);
 						ctrl_end = 0;
 						for( j = i; j+1 < ofs+len; j ++ )
 						{
@@ -559,13 +690,13 @@ t_template *Template_int_Load(const char *Filename)
 						continue ;
 					}
 					else if( buffer[i+1] == ' ' ) {
-						// Ignore if there's a space after the bracket
+						// Treat as normal text is there's a space after '{'
 						continue ;
 					}
 				}
 
 				ctrl_start = i;
-				_addVerbatim(listhead, buffer + ctrl_end, i - ctrl_end);
+				_addVerbatim(state.CurList, buffer + ctrl_end, i - ctrl_end);
 				ctrl_end = 0;
 				for( j = i; j < ofs+len; j ++ )
 				{
@@ -580,14 +711,19 @@ t_template *Template_int_Load(const char *Filename)
 				buffer[ctrl_end] = '\0';
 
 				ctrl_data = buffer + ctrl_start + 1;
-//				printf("Control statement: %s\n", ctrl_data);
 
-				listhead = Template_int_ParseStatement(listhead, ctrl_data, stack);
+				void *listhead = Template_int_ParseStatement(&state, Filename, ctrl_data);
 				if( listhead == NULL ) {
 					fprintf(stderr, "Something bad happened\n");
-					fclose(fp);
+					while( state.FStackPos -- )
+					{
+						fclose(state.FStack[state.FStackPos].FP);
+						free(state.FStack[state.FStackPos].Filename);
+					}
+					fclose(rootfp);
 					return ret;
 				}
+				state.CurList = listhead;
 
 				ctrl_start = -1;
 				ctrl_end += 1;
@@ -596,19 +732,19 @@ t_template *Template_int_Load(const char *Filename)
 		}
 		
 		if( ctrl_start == -1 )
-			_addVerbatim(listhead, buffer + ctrl_end, (ofs + len) - ctrl_end);
+			_addVerbatim(state.CurList, buffer + ctrl_end, (ofs + len) - ctrl_end);
 		if( ctrl_start > 0 ) {
 			memmove(buffer, buffer + ctrl_start, (ofs + len) - ctrl_start);
 			ofs = (ofs + len) - ctrl_start;
 		}
 		
 		if( len == 0 )	{
-			_addVerbatim(listhead, buffer, ofs);
+			_addVerbatim(state.CurList, buffer, ofs);
 			break;
 		}
 	}
 	
-	fclose(fp);
+	fclose(rootfp);
 
 	return ret;
 }
