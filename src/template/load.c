@@ -728,6 +728,8 @@ t_template *Template_int_Load(const char *Filename)
 				ctrl_start = -1;
 				ctrl_end += 1;
 				i = ctrl_end;
+				if( i + 1 < ofs + len && buffer[i+1] == '\n' )
+					i ++;
 			}
 		}
 		
