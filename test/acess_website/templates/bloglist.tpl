@@ -5,6 +5,3 @@
 {$Item.formatted_text}
 </p>
 {endforeach}
-
-{* vim: ft=html
-*}

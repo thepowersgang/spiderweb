@@ -29,15 +29,14 @@
   <span class="right">
 {if $UserName!=""}
    Welcome <i>{$UserName}</i>
-   <a href="usercp.php">User CP</a>
-   <a href="login.php?logout&amp;lastpage={$PagePathEnc}">Logout</a>
+   <a href="usercp.ss">User CP</a>
+   <a href="login.ss?logout&amp;lastpage={$PagePathEnc}">Logout</a>
 {else}
-   <a href="login.php?lastpage={$PagePathEnc}">Login</a>
-   <a href="register.php?lastpage={$PagePathEnc}">Register</a>
+   <a href="login.ss?lastpage={$PagePathEnc}">Login</a>
+   <a href="register.ss?lastpage={$PagePathEnc}">Register</a>
 {endif}
   </span>
  </div></div>
  <div id="body">
-
 {* vim: ft=html
 *}
