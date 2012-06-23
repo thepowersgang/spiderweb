@@ -11,9 +11,10 @@ $tpl->Assign("PageID", "index");
 
 $tpl->Display("templates/header.tpl");
 
-#Lang.StringMap	$posts[];
-#$posts = Blog_GetLatest($dbconn, 0, 3);
+Lang.StringMap	$posts[];
+$posts = Blog_GetLatest($dbconn, 0, 3);
 
+/*
 Lang.StringMap	$post = new Lang.StringMap();
 $post->set("id", "1");
 $post->set("name", "Testing Post");
@@ -22,6 +23,7 @@ $post->set("username", "thePowersGang");
 $post->set("formatted_text", "Test post content");
 Lang.StringMap $posts[1];
 $posts[0] = $post;
+*/
 $tpl->Assign("NewsItems", $posts);
 
 $tpl->Display("templates/index.tpl");
