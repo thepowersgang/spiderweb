@@ -14,19 +14,19 @@
 // === PROTOTYPES ===
 FCN_PROTO(Template__construct);
 void	Template__destruct(tSpiderObject *This);
-FCN_PROTO(Template_Assign_S);
+FCN_PROTO(Template_Assign);
 FCN_PROTO(Template_Display);
 
 
 // === GLOBALS ===
 DEF_OBJ_FCN(Template_Display, "Display", NULL, SS_DATATYPE_NOVALUE, -2, SS_DATATYPE_STRING, 0);
-DEF_OBJ_FCN(Template_Assign_S,  "Assign",  Template_Display, SS_DATATYPE_NOVALUE, -2, SS_DATATYPE_STRING, SS_DATATYPE_STRING, 0);
+DEF_OBJ_FCN(Template_Assign,  "Assign",  Template_Display, SS_DATATYPE_NOVALUE, -2, SS_DATATYPE_STRING, -1);
 DEF_OBJ_FCN(Template__construct, "_construct", NULL, SS_DATATYPE_NOVALUE, 0);
 tSpiderClass	g_obj_Template = {
 	NULL, "SpiderWeb@Template",
 	&g_fcn_Template__construct,	// Constructor
 	Template__destruct,
-	&g_fcn_Template_Assign_S,	// First function
+	&g_fcn_Template_Assign,	// First function
 	0,
 	{
 	}
@@ -45,6 +45,7 @@ FCN_PROTO(Template__construct)
 	
 	info = ret->OpaqueData;
 	info->ValueMap.FirstEnt = NULL;
+	info->IteratorValues.FirstEnt = NULL;
 	
 	*(tSpiderObject**)RetData = ret;
 	
@@ -57,19 +58,74 @@ void Template__destruct(tSpiderObject *This)
 	Template_int_FreeMap( &info->ValueMap );
 }
 
-FCN_PROTO(Template_Assign_S)
+int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, int ValueType, const void *ValuePtr)
+{
+//	printf("Adding 0x%x %p to %p as '%s'\n",
+//		ValueType, ValuePtr, Map, Key);
+	if( SS_GETARRAYDEPTH(ValueType) )
+	{
+		 int	i;
+		 int	type = SS_DOWNARRAY(ValueType);
+		const tSpiderArray	*array = ValuePtr;
+		t_map_entry *submap = Template_int_AddMapItem_SubMap( Map, Key );
+		
+		for( i = 0; i < array->Length; i ++ )
+		{
+			char	key[10];
+			snprintf(key, 10, "%i",i);
+			Template_int_AddItem(Script, &submap->SubMap, key, type, SpiderScript_GetArrayPtr(array, i));
+		}
+	}
+	else if( ValueType == SpiderScript_GetTypeCode(Script, "Lang@StringMap") )
+	{
+		tSpiderArray	*keys;
+		tSpiderString	*val;
+		 int	rv, i;
+	
+		// Call the ->keys() method (with the `this` parameter)	
+		rv = SpiderScript_ExecuteMethod(Script, "keys", &keys, 1, &ValueType, &ValuePtr, NULL);
+		if(rv != SS_MAKEARRAY(SS_DATATYPE_STRING))
+			return -1;	// Oops?
+		
+		t_map_entry *submap = Template_int_AddMapItem_SubMap( Map, Key );
+		
+		for( i = 0; i < keys->Length; i ++ )
+		{
+			 int	types[] = {ValueType, SS_DATATYPE_STRING};
+			const void	*args[] = {ValuePtr, keys->Strings[i]};
+			if( !keys->Strings[i] )
+				continue ;
+			rv = SpiderScript_ExecuteMethod(Script, "get", &val, 2, types, args, NULL);
+			if(rv != SS_DATATYPE_STRING)
+				break;
+			Template_int_AddItem(Script, &submap->SubMap, keys->Strings[i]->Data, SS_DATATYPE_STRING, val);
+			SpiderScript_DereferenceString(val);
+		}
+		SpiderScript_DereferenceArray(keys);
+	}
+	else
+	{
+		tSpiderString	*str = SpiderScript_CastValueToString(ValueType, ValuePtr);
+		if( str == NULL ) {
+			// TODO: Throw exception
+			return -1;
+		}
+		Template_int_AddMapItem_String(Map,Key, str->Data);
+		SpiderScript_DereferenceString(str);
+	}
+	return 0;
+}
+
+FCN_PROTO(Template_Assign)
 {
 	if( NArgs != 3 )	return -1;
 	if( ArgTypes[1] != SS_DATATYPE_STRING )	return -1;
-	if( ArgTypes[2] != SS_DATATYPE_STRING )	return -1;
-	
+
 	const tSpiderObject	*this = Args[0];
 	t_obj_Template	*info = this->OpaqueData;
 	const tSpiderString	*key = Args[1];
-	const tSpiderString	*value = Args[2];
-	
-	Template_int_AddMapItem_String( &info->ValueMap, key->Data, value->Data);
-	
+
+	Template_int_AddItem(Script, &info->ValueMap, key->Data, ArgTypes[2], Args[2] );
 	return 0;
 }
 

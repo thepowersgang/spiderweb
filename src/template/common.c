@@ -13,7 +13,8 @@
 
 // === PROTOTYPES ===
 t_map_entry	*Template_int_GetMapItem(t_map *Map, const char *Key);
-t_map_entry	*Template_int_AddMapItem(t_map *Map, int Type, const char *Key, int DataSize);
+void	Template_int_DelMapItem(t_map *Map, const char *Key);
+t_map_entry	*Template_int_AddMapItem(t_map *Map, enum e_map_entry_types Type, const char *Key, int DataSize);
 t_map_entry	*Template_int_AddMapItem_String(t_map *Map, const char *Key, const char *String);
 void	Template_int_FreeMap(t_map *Map);
 
@@ -29,7 +30,25 @@ t_map_entry *Template_int_GetMapItem(t_map *Map, const char *Key)
 	return NULL;
 }
 
-t_map_entry *Template_int_AddMapItem(t_map *Map, int Type, const char *Key, int DataSize)
+void Template_int_DelMapItem(t_map *Map, const char *Key)
+{
+	t_map_entry	*ent, *prev = NULL;
+	
+	for( ent = Map->FirstEnt; ent; prev = ent, ent = ent->Next )
+	{
+		if( strcmp(ent->Key, Key) == 0 )	break;
+	}
+	if( !ent )	return ;
+	
+	if( prev )
+		prev->Next = ent->Next;
+	else
+		Map->FirstEnt = ent->Next;
+	
+	free(ent);
+}
+
+t_map_entry *Template_int_AddMapItem(t_map *Map, enum e_map_entry_types Type, const char *Key, int DataSize)
 {
 	t_map_entry	*ent, *prev;
 	
@@ -41,7 +60,7 @@ t_map_entry *Template_int_AddMapItem(t_map *Map, int Type, const char *Key, int 
 	
 	ent = malloc( sizeof(*ent) + strlen(Key) + 1 + DataSize);
 	ent->Next = NULL;
-	ent->Type = 2;
+	ent->Type = Type;
 	ent->Key = ent->Data + DataSize;
 	strcpy(ent->Key, Key);
 	
@@ -49,13 +68,32 @@ t_map_entry *Template_int_AddMapItem(t_map *Map, int Type, const char *Key, int 
 		prev->Next = ent;
 	else
 		Map->FirstEnt = ent;
+	
+	return ent;
+}
+
+t_map_entry *Template_int_AddMapItem_Ptr(t_map *Map, const char *Key, t_map_entry *Ptr)
+{
+	t_map_entry *ent;
+	ent = Template_int_AddMapItem(Map, MAPENT_POINTER, Key, 0);
+	// TODO: Error check
+	ent->Ptr = Ptr;
+	return ent;
+}
+
+t_map_entry *Template_int_AddMapItem_SubMap(t_map *Map, const char *Key)
+{
+	t_map_entry *ent;
+	ent = Template_int_AddMapItem(Map, MAPENT_VECTOR, Key, 0);
+	// TODO: Handle pre-existing?
+	memset(&ent->SubMap, 0, sizeof(ent->SubMap));
 	return ent;
 }
 
 t_map_entry *Template_int_AddMapItem_String(t_map *Map, const char *Key, const char *String)
 {
 	t_map_entry *ent;
-	ent = Template_int_AddMapItem(Map, 2, Key, strlen(String)+1);
+	ent = Template_int_AddMapItem(Map, MAPENT_STRING, Key, strlen(String)+1);
 	ent->String = ent->Data;
 	strcpy(ent->String, String);
 	return ent;

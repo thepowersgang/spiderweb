@@ -25,10 +25,34 @@ int Template_int_RunSec_Arith(t_obj_Template *State, struct s_tplop_arith *Arith
 	case ARITHOP_CMPEQ:
 		lt = Template_int_RunSec(State, Arith->Left, &lv);
 		rt = Template_int_RunSec(State, Arith->Right, &rv);
-		if( lt != 2 && lt != rt )	return 0;
+		if( lt != MAPENT_STRING && lt != rt )	return 0;
 		if( strcmp(lv, rv) != 0 )	return 0;
 		*ValuePtr = "true";
-		return 2;
+		return MAPENT_STRING;
+	
+	case ARITHOP_FIELD:
+		lt = Template_int_RunSec(State, Arith->Left, &lv);
+		rt = Template_int_RunSec(State, Arith->Right, &rv);
+
+		if( lt != MAPENT_VECTOR || rt != MAPENT_STRING ) {
+			return 0;
+		}	
+
+		t_map_entry *ent = Template_int_GetMapItem(lv, rv);
+		switch(ent->Type)
+		{
+		case MAPENT_STRING:
+			*ValuePtr = ent->String;
+			break;
+		case MAPENT_VECTOR:
+			*ValuePtr = &ent->SubMap;
+			break;
+		case MAPENT_POINTER:
+		case MAPENT_UNSET:
+			*ValuePtr = NULL;
+			return 0;
+		}
+		return ent->Type;
 	default:
 		break;
 	}
@@ -59,23 +83,30 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 		return 0;
 	case TPLOP_VALUEOUT:
 		rv = Template_int_RunSec(State, Section->Output.Value, &ptr);
-		if( rv == 2 )	fputs(ptr, stdout);
+		if( rv == MAPENT_STRING )	fputs(ptr, stdout);
 		return 0;
 	
 	case TPLOP_CONSTANT:
 		*ValuePtr = Section->Constant.Data;
-		return 2;
+		return MAPENT_STRING;
 	case TPLOP_GETVALUE:
-		val = Template_int_GetMapItem(&State->ValueMap, Section->Value.Name);
+//		printf("GetValue '%s'\n", Section->Value.Name);
+		val = Template_int_GetMapItem(&State->IteratorValues, Section->Value.Name);
+		if( !val )
+			val = Template_int_GetMapItem(&State->ValueMap, Section->Value.Name);
+	getvalue_retry:
+//		printf("val = %p\n", val);
 		if( !val )	return 0;
 		switch(val->Type)
 		{
-		case 0:	*ValuePtr = NULL;	return 0;	// Unset
-		case 1:	*ValuePtr = &val->SubMap;	return 1;	// Vector
-		case 2:	*ValuePtr = val->String;	return 2;	// String - return the string
-		default:	*ValuePtr = NULL;	return -1;
+		case MAPENT_UNSET:	*ValuePtr = NULL;	break;	// Unset
+		case MAPENT_VECTOR:	*ValuePtr = &val->SubMap;	break;	// Vector
+		case MAPENT_STRING:	*ValuePtr = val->String;	break;	// String
+		case MAPENT_POINTER:	val = val->Ptr;	goto getvalue_retry;	// Indirect
+		default:	*ValuePtr = NULL;	fprintf(stderr, "Unknown %i\n", val->Type);	return -1;
 		}
-		return 0;
+//		printf("ret %i\n", val->Type);
+		return val->Type;
 	
 	case TPLOP_CONDITIONAL:
 //		printf("Section->Conditional = {Condition:%p,True:%p,False:%p}\n",
@@ -90,17 +121,20 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 		return 0;
 	case TPLOP_ITERATOR:
 		rv = Template_int_RunSec(State, Section->Iterator.Array, &ptr);
-		if( rv != 1 || ptr == NULL ) {
+		if( rv != MAPENT_VECTOR || ptr == NULL ) {
 			Template_int_RunSecList(State, Section->Iterator.IfEmpty);
 		}
 		else {
 			t_map_entry	*ent;
-			for( ent = ptr; ent; ent = ent->Next )
+			t_map_entry	*val = Template_int_AddMapItem_Ptr(&State->IteratorValues, Section->Iterator.ItemName, NULL);
+//			printf("Iterating into '%s'\n", Section->Iterator.ItemName);
+			for( ent = ((t_map*)ptr)->FirstEnt; ent; ent = ent->Next )
 			{
-				// TODO: Assign value into map according to stated name
-				// TODO: Run body for each entry
+//				printf("Item %p '%s'\n", ent, ent->Key);
+				val->Ptr = ent;
 				Template_int_RunSecList(State, Section->Iterator.PerItem);
 			}
+			Template_int_DelMapItem(&State->IteratorValues, Section->Iterator.ItemName);
 		}
 		return 0;
 	case TPLOP_ARITH:

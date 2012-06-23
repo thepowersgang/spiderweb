@@ -21,7 +21,16 @@ struct s_map {
 
 typedef struct {
 	t_map	ValueMap;
+	t_map	IteratorValues;
 } t_obj_Template;
+
+enum e_map_entry_types
+{
+	MAPENT_UNSET,
+	MAPENT_VECTOR,	// Vector
+	MAPENT_STRING,	// String
+	MAPENT_POINTER	// Indirect vector
+};
 
 /**
  * \brief Key-Value Map
@@ -29,9 +38,10 @@ typedef struct {
 struct s_map_entry {
 	t_map_entry	*Next;
 	char	*Key;	// Key is stored after value
-	 int	Type;	// 0: Unset, 1 = Vector, 2: String
+	enum e_map_entry_types	Type;	// 0: Unset, 1: Vector, 2: String, 3: Indirect vector
 	union {
 		t_map	SubMap;
+		t_map_entry	*Ptr;
 		 int	Integer;
 		char	*String;
 	};
@@ -142,6 +152,9 @@ struct s_template
 
 
 extern t_map_entry	*Template_int_GetMapItem(t_map *Map, const char *Key);
+extern void	Template_int_DelMapItem(t_map *Map, const char *Key);
+extern t_map_entry	*Template_int_AddMapItem_Ptr(t_map *Map, const char *Key, t_map_entry *Ptr);
+extern t_map_entry	*Template_int_AddMapItem_SubMap(t_map *Map, const char *Key);
 extern t_map_entry	*Template_int_AddMapItem_String(t_map *Map, const char *Key, const char *String);
 extern void	Template_int_FreeMap(t_map *Map);
 
