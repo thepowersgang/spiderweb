@@ -7,61 +7,39 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <spiderscript.h>
 #include "../spiderweb_internal.h"
 #include "template_common.h"
 
-// === PROTOTYPES ===
-FCN_PROTO(Template__construct);
-void	Template__destruct(tSpiderObject *This);
-FCN_PROTO(Template_Assign);
-FCN_PROTO(Template_Display);
+@NAMESPACE SpiderWeb
+@{
 
+@CLASS Template
+@{
 
-// === GLOBALS ===
-DEF_OBJ_FCN(Template_Display, "Display", NULL, SS_DATATYPE_NOVALUE, -2, SS_DATATYPE_STRING, 0);
-DEF_OBJ_FCN(Template_Assign,  "Assign",  Template_Display, SS_DATATYPE_NOVALUE, -2, SS_DATATYPE_STRING, -1);
-DEF_OBJ_FCN(Template__construct, "_construct", NULL, SS_DATATYPE_NOVALUE, 0);
-tSpiderClass	g_obj_Template = {
-	NULL, "SpiderWeb@Template",
-	&g_fcn_Template__construct,	// Constructor
-	Template__destruct,
-	&g_fcn_Template_Assign,	// First function
-	0,
-	{
-	}
-};
-
-// === CODE ===
-FCN_PROTO(Template__construct)
-{
+@CONSTRUCTOR ()
+@{
 	tSpiderObject	*ret;
 	t_obj_Template	*info;
 	
-	if( NArgs != 0 )	return -1;
-	
-	ret = SpiderScript_AllocateObject(Script, &g_obj_Template, sizeof(t_obj_Template));
-	if(!ret)	return -1;
+	ret = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(t_obj_Template));
+	if(!ret)	@RETURN NULL;	// TODO: Exception
 	
 	info = ret->OpaqueData;
 	info->ValueMap.FirstEnt = NULL;
 	info->IteratorValues.FirstEnt = NULL;
 	
-	*(tSpiderObject**)RetData = ret;
-	
-	return 0;
-}
-void Template__destruct(tSpiderObject *This)
-{
-	t_obj_Template	*info = This->OpaqueData;
+	@RETURN ret;
+@}
+
+@DESTRUCTOR
+@{
+	t_obj_Template	*info = this->OpaqueData;
 	
 	Template_int_FreeMap( &info->ValueMap );
-}
+@}
 
 int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, int ValueType, const void *ValuePtr)
 {
-//	printf("Adding 0x%x %p to %p as '%s'\n",
-//		ValueType, ValuePtr, Map, Key);
 	if( SS_GETARRAYDEPTH(ValueType) )
 	{
 		 int	i;
@@ -76,7 +54,7 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, int
 			Template_int_AddItem(Script, &submap->SubMap, key, type, SpiderScript_GetArrayPtr(array, i));
 		}
 	}
-	else if( ValueType == SpiderScript_GetTypeCode(Script, "Lang@StringMap") )
+	else if( ValueType == @TYPECODE(Lang.StringMap) )
 	{
 		tSpiderArray	*keys;
 		tSpiderString	*val;
@@ -116,33 +94,21 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, int
 	return 0;
 }
 
-FCN_PROTO(Template_Assign)
-{
-	if( NArgs != 3 )	return -1;
-	if( ArgTypes[1] != SS_DATATYPE_STRING )	return -1;
-
-	const tSpiderObject	*this = Args[0];
+@FUNCTION void Assign(String Key, * Value)
+@{
 	t_obj_Template	*info = this->OpaqueData;
-	const tSpiderString	*key = Args[1];
 
-	Template_int_AddItem(Script, &info->ValueMap, key->Data, ArgTypes[2], Args[2] );
-	return 0;
-}
+	Template_int_AddItem(Script, &info->ValueMap, Key->Data, @TYPEOF(Value), Value );
+	
+	@RETURN;
+@}
 
-FCN_PROTO(Template_Display)
-{
-	const tSpiderObject	*this;
-	const tSpiderString	*tpl_name;
+@FUNCTION void Display(String tpl_name)
+@{
 	t_obj_Template	*info;
 	t_template	*tpl_data;
 	
-	if(NArgs != 2)	return -1;
-	if(ArgTypes[1] != SS_DATATYPE_STRING)	return -1;
-	if(Args[1] == NULL)	return -1;
-
-	this = Args[0];
 	info = this->OpaqueData;
-	tpl_name = Args[1];
 
 	CGI_SendHeadersOnce();
 	
@@ -151,6 +117,7 @@ FCN_PROTO(Template_Display)
 	if( !tpl_data )
 	{
 		printf("Unable to find template `%s`\n", tpl_name->Data);
+		// TODO: Exception
 	}
 	else
 	{
@@ -162,6 +129,10 @@ FCN_PROTO(Template_Display)
 		Template_int_Unload(tpl_data);
 	}
 	
-	return 0;
-}
+	@RETURN ;
+@}
 
+@}	// Class
+@}	// Namespace SpiderWeb
+
+// vim: ft=c

@@ -1,0 +1,162 @@
+/*
+ * SpiderWeb Scripting Suite
+ * - By John Hodge (thePowersGang)
+ *
+ * mysql.ssf
+ * - MySQL API
+ */
+#include <mysql/mysql.h>
+@NAMESPACE SpiderWeb
+@{
+
+typedef struct
+{
+	MYSQL	Handle;
+} t_mysql_obj;
+
+typedef struct
+{
+	 int	nRows;
+	MYSQL_RES *res;
+} t_mysql_result_obj;
+
+@CLASS MySQL
+@{
+	@CONSTRUCTOR (String Server, String Username, String Password)
+	@{
+		tSpiderObject	*this = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(t_mysql_obj));
+		if(!this)	@RETURN NULL;
+		t_mysql_obj	*info = this->OpaqueData;
+		
+		MYSQL	*rv = mysql_init(&info->Handle);
+		if(!rv) {
+			// TODO: Exception
+			SpiderScript_DereferenceObject(this);
+			@RETURN NULL;
+		}
+
+		// TODO: Parse server to allow different ports
+		rv = mysql_real_connect(&info->Handle, Server->Data, Username->Data, Password->Data, NULL, 0, NULL, 0);
+		if( !rv ) {
+			// TODO: Exception
+			SpiderScript_DereferenceObject(this);
+			@RETURN NULL;
+		}
+		
+		@RETURN this;
+	@}
+	
+	@DESTRUCTOR
+	@{
+		t_mysql_obj	*info = this->OpaqueData;
+		mysql_close(&info->Handle);
+	@}
+	
+	@FUNCTION SpiderWeb.MySQL.Result Query(String QueryString)
+	@{
+		t_mysql_obj	*info = this->OpaqueData;
+		 int	rv;
+		
+		rv = mysql_real_query(&info->Handle, QueryString->Data, QueryString->Length);
+		if( rv ) {
+			// Some sort of error
+			// TODO: Exception
+			@RETURN NULL;
+		}
+		
+		MYSQL_RES *result = mysql_store_result(&info->Handle);
+		if( result ) {
+			// All good!
+		}
+		else if( mysql_field_count(&info->Handle) == 0 ) {
+			// Success, but didn't need to return data
+		}
+		else {
+			// Oops, didn't return data, but it should have
+			// TODO: Exception
+			@RETURN NULL;
+		}
+		
+		tSpiderObject *ret;
+		rv = SpiderScript_CreateObject_Type(Script, @TYPECODE(SpiderWeb.MySQL.Result),
+			&ret, 0, NULL, NULL, NULL);
+		if( rv < 0 ) {
+			// Can't construct?
+			// TODO: Exception?
+			@RETURN NULL;
+		}
+		t_mysql_result_obj	*ret_info = ret->OpaqueData;
+
+		ret_info->res = result;
+		if( result )
+			ret_info->nRows = mysql_num_fields(result);
+		else
+			ret_info->nRows = mysql_affected_rows(&info->Handle);
+
+		@RETURN ret;
+	@}
+@}
+
+@NAMESPACE MySQL
+@{
+
+@CLASS Result
+@{
+	@CONSTRUCTOR ()
+	@{
+		// TODO: Somehow determine if the script constructed this?
+		tSpiderObject	*ret = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(t_mysql_result_obj));
+		if(!ret)	@RETURN NULL;
+		t_mysql_result_obj	*info = ret->OpaqueData;
+		info->nRows = 0;
+		info->res = NULL;
+		@RETURN ret;
+	@}
+	
+	@DESTRUCTOR
+	@{
+		t_mysql_result_obj	*info = this->OpaqueData;
+		if( info->res )
+			mysql_free_result(info->res);
+	@}
+	
+	@FUNCTION Integer ResultCount ()
+	@{
+		t_mysql_result_obj	*info = this->OpaqueData;
+		@RETURN info->nRows;
+	@}
+	
+	@FUNCTION String[] GetNextRow()
+	@{
+		t_mysql_result_obj	*info = this->OpaqueData;
+		if(!info->res)	@RETURN NULL;
+		
+		MYSQL_ROW row = mysql_fetch_row(info->res);
+		if(!row) {
+			// TODO: Would this be in error?
+			@RETURN NULL;
+		}
+		
+		int nf = mysql_num_fields(info->res);
+		unsigned long *lengths = mysql_fetch_lengths(info->res);
+		
+		tSpiderArray *ret = SpiderScript_CreateArray(@TYPECODE(String), nf);
+		if( !ret )	@RETURN NULL;
+		
+		 int	i;
+		for( i = 0; i < nf; i ++ )
+		{
+			if( row[i] )
+				ret->Strings[i] = SpiderScript_CreateString(lengths[i], row[i]);
+			else
+				ret->Strings[i] = NULL;
+		}
+		
+		@RETURN ret;
+	@}
+@}
+@}
+
+@} // SpiderWeb
+
+// vim: ft=c

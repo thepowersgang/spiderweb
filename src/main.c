@@ -11,11 +11,12 @@
 #define ARRAY_SIZE(x)	((sizeof(x))/(sizeof((x)[0])))
 
 // === PROTOTYPES ===
-void	Script_int_System_IO_DestroyPtr(void *Data);
+void	SpiderWeb_AppendClass(tSpiderClass *FirstClass);
 
 // === GLOBALS ===
-extern tSpiderClass	g_obj_IO_File;
-extern tSpiderClass	g_obj_Template;
+extern tSpiderClass	*gpfileio_FirstClass;
+extern tSpiderClass	*gptemplate_object_FirstClass;
+extern tSpiderClass	*gpmysql_FirstClass;
 extern tSpiderFunction	gScript_IO_Print;
 extern tSpiderFunction	gScript_IO_ReadLine;
 
@@ -40,20 +41,22 @@ int main(int argc, char *argv[], char **envp)
 	// TODO: Argument handling
 	gsScriptFile = argv[1];
 
+	// Parse CGI values
+	// - Maybe delay until CGI::ReadGET,CGI::ReadPOST are used	
 	Module_CGI_Initialise();
 
-	// TODO: Parse CGI values?
-	// - Maybe delay until CGI::ReadGET,CGI::ReadPOST are used	
 
 	// Prepare script engine
 	// - Register functions
 	SpiderWeb_AppendFunction(&gScript_IO_Print);
 	SpiderWeb_AppendFunction(&gScript_IO_ReadLine);
 	
-	// - Register classes (less elegant)
-	gScriptVariant.Classes = &g_obj_IO_File;
-	g_obj_IO_File.Next = &g_obj_Template;
-	g_obj_Template.Next = NULL;
+	// - Register classes
+	// > NOTE: Order matters, they must be in the opposite order to the makefile order
+	// TODO: Remove the above restriction
+	SpiderWeb_AppendClass(gpmysql_FirstClass);
+	SpiderWeb_AppendClass(gptemplate_object_FirstClass);
+	SpiderWeb_AppendClass(gpfileio_FirstClass);
 	
 	// Parse Script file
 	script = SpiderScript_ParseFile(&gScriptVariant, gsScriptFile);
@@ -96,6 +99,19 @@ void SpiderWeb_AppendFunction(tSpiderFunction *Function)
 	else
 		*ListHead = Function;
 	Function->Next = NULL;
+}
+
+void SpiderWeb_AppendClass(tSpiderClass *FirstClass)
+{
+	tSpiderClass	*e, *p = NULL;
+	for( e = gScriptVariant.Classes; e; p = e, e = e->Next )
+	{
+		if( e == FirstClass )	return ;	// TODO: Flag a bug report
+	}
+	if( p )
+		p->Next = FirstClass;
+	else
+		gScriptVariant.Classes = FirstClass;
 }
 
 /**
