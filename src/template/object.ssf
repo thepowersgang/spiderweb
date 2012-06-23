@@ -40,6 +40,9 @@
 
 int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, int ValueType, const void *ValuePtr)
 {
+	if( !ValuePtr )
+		return 0;
+	
 	if( SS_GETARRAYDEPTH(ValueType) )
 	{
 		 int	i;

@@ -6,6 +6,7 @@
  * - MySQL API
  */
 #include <mysql/mysql.h>
+#include <stdio.h>
 @NAMESPACE SpiderWeb
 @{
 
@@ -20,6 +21,8 @@ typedef struct
 	MYSQL_RES *res;
 } t_mysql_result_obj;
 
+int gi_mysql_object_count = 0;
+
 @CLASS MySQL
 @{
 	@CONSTRUCTOR (String Server, String Username, String Password)
@@ -28,16 +31,19 @@ typedef struct
 		if(!this)	@RETURN NULL;
 		t_mysql_obj	*info = this->OpaqueData;
 		
+		gi_mysql_object_count ++;
+
 		MYSQL	*rv = mysql_init(&info->Handle);
 		if(!rv) {
 			// TODO: Exception
 			SpiderScript_DereferenceObject(this);
 			@RETURN NULL;
 		}
-
+	
 		// TODO: Parse server to allow different ports
 		rv = mysql_real_connect(&info->Handle, Server->Data, Username->Data, Password->Data, NULL, 0, NULL, 0);
 		if( !rv ) {
+//			printf("%s\n", mysql_error(&info->Handle));
 			// TODO: Exception
 			SpiderScript_DereferenceObject(this);
 			@RETURN NULL;
@@ -50,8 +56,22 @@ typedef struct
 	@{
 		t_mysql_obj	*info = this->OpaqueData;
 		mysql_close(&info->Handle);
+		gi_mysql_object_count --;
+		if( gi_mysql_object_count == 0 )
+			mysql_library_end();
 	@}
 	
+	@FUNCTION void SetDatabase(String Database)
+	@{
+		t_mysql_obj	*info = this->OpaqueData;
+		int rv = mysql_select_db(&info->Handle, Database->Data);
+		if( rv ) {
+			// TODO: Exception
+			printf("SpiderWeb.MySQL->SetDatabase Error %s\n", mysql_error(&info->Handle));
+			@RETURN ;
+		}
+	@}
+
 	@FUNCTION SpiderWeb.MySQL.Result Query(String QueryString)
 	@{
 		t_mysql_obj	*info = this->OpaqueData;
@@ -61,6 +81,7 @@ typedef struct
 		if( rv ) {
 			// Some sort of error
 			// TODO: Exception
+			printf("SpiderWeb.MySQL->Query Error %s\n", mysql_error(&info->Handle));
 			@RETURN NULL;
 		}
 		
@@ -74,6 +95,7 @@ typedef struct
 		else {
 			// Oops, didn't return data, but it should have
 			// TODO: Exception
+			printf("SpiderWeb.MySQL->Query Error %s\n", mysql_error(&info->Handle));
 			@RETURN NULL;
 		}
 		
@@ -83,6 +105,7 @@ typedef struct
 		if( rv < 0 ) {
 			// Can't construct?
 			// TODO: Exception?
+			printf("SpiderWeb.MySQL->Query Error creating result\n");
 			@RETURN NULL;
 		}
 		t_mysql_result_obj	*ret_info = ret->OpaqueData;
@@ -92,7 +115,7 @@ typedef struct
 			ret_info->nRows = mysql_num_fields(result);
 		else
 			ret_info->nRows = mysql_affected_rows(&info->Handle);
-
+		
 		@RETURN ret;
 	@}
 @}

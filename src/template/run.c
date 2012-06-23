@@ -39,6 +39,10 @@ int Template_int_RunSec_Arith(t_obj_Template *State, struct s_tplop_arith *Arith
 		}	
 
 		t_map_entry *ent = Template_int_GetMapItem(lv, rv);
+		if( !ent ) {
+			*ValuePtr = "BADINDEX";
+			return 0;
+		}
 		switch(ent->Type)
 		{
 		case MAPENT_STRING:
