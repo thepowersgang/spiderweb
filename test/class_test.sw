@@ -29,5 +29,5 @@ TestClass $tc = new TestClass();
 $tc->method_1(100, 1, 1);
 IO.Print("Final = " + $tc->method_1(0, 10, 5) + "\n");
 
-$tc = null;
+delete $tc;
 

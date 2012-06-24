@@ -1,0 +1,141 @@
+/*
+ * SpiderWeb
+ * - By John Hodge (thePowersGang)
+ * 
+ * Template Object
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "../spiderweb_internal.h"
+#include "template_common.h"
+
+@NAMESPACE SpiderWeb
+@{
+
+@CLASS Template
+@{
+
+@CONSTRUCTOR ()
+@{
+	tSpiderObject	*ret;
+	t_obj_Template	*info;
+	
+	ret = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(t_obj_Template));
+	if(!ret)	@RETURN NULL;	// TODO: Exception
+	
+	info = ret->OpaqueData;
+	info->ValueMap.FirstEnt = NULL;
+	info->IteratorValues.FirstEnt = NULL;
+	
+	@RETURN ret;
+@}
+
+@DESTRUCTOR
+@{
+	t_obj_Template	*info = this->OpaqueData;
+	
+	Template_int_FreeMap( &info->ValueMap );
+@}
+
+int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, int ValueType, const void *ValuePtr)
+{
+	if( !ValuePtr )
+		return 0;
+	
+	if( SS_GETARRAYDEPTH(ValueType) )
+	{
+		 int	i;
+		 int	type = SS_DOWNARRAY(ValueType);
+		const tSpiderArray	*array = ValuePtr;
+		t_map_entry *submap = Template_int_AddMapItem_SubMap( Map, Key );
+		
+		for( i = 0; i < array->Length; i ++ )
+		{
+			char	key[10];
+			snprintf(key, 10, "%i",i);
+			Template_int_AddItem(Script, &submap->SubMap, key, type, SpiderScript_GetArrayPtr(array, i));
+		}
+	}
+	else if( ValueType == @TYPECODE(Lang.StringMap) )
+	{
+		tSpiderArray	*keys;
+		tSpiderString	*val;
+		 int	rv, i;
+	
+		// Call the ->keys() method (with the `this` parameter)	
+		rv = SpiderScript_ExecuteMethod(Script, "keys", &keys, 1, &ValueType, &ValuePtr, NULL);
+		if(rv != SS_MAKEARRAY(SS_DATATYPE_STRING))
+			return -1;	// Oops?
+		
+		t_map_entry *submap = Template_int_AddMapItem_SubMap( Map, Key );
+		
+		for( i = 0; i < keys->Length; i ++ )
+		{
+			 int	types[] = {ValueType, SS_DATATYPE_STRING};
+			const void	*args[] = {ValuePtr, keys->Strings[i]};
+			if( !keys->Strings[i] )
+				continue ;
+			rv = SpiderScript_ExecuteMethod(Script, "get", &val, 2, types, args, NULL);
+			if(rv != SS_DATATYPE_STRING)
+				break;
+			Template_int_AddItem(Script, &submap->SubMap, keys->Strings[i]->Data, SS_DATATYPE_STRING, val);
+			SpiderScript_DereferenceString(val);
+		}
+		SpiderScript_DereferenceArray(keys);
+	}
+	else
+	{
+		tSpiderString	*str = SpiderScript_CastValueToString(ValueType, ValuePtr);
+		if( str == NULL ) {
+			// TODO: Throw exception
+			return -1;
+		}
+		Template_int_AddMapItem_String(Map,Key, str->Data);
+		SpiderScript_DereferenceString(str);
+	}
+	return 0;
+}
+
+@FUNCTION void Assign(String Key, * Value)
+@{
+	t_obj_Template	*info = this->OpaqueData;
+
+	Template_int_AddItem(Script, &info->ValueMap, Key->Data, @TYPEOF(Value), Value );
+	
+	@RETURN;
+@}
+
+@FUNCTION void Display(String tpl_name)
+@{
+	t_obj_Template	*info;
+	t_template	*tpl_data;
+	
+	info = this->OpaqueData;
+
+	CGI_SendHeadersOnce();
+	
+	// Load template into memory
+	tpl_data = Template_int_Load(tpl_name->Data);
+	if( !tpl_data )
+	{
+		printf("Unable to find template `%s`\n", tpl_name->Data);
+		// TODO: Exception
+	}
+	else
+	{
+		// Cache for faster loading later?
+		// Write to output filling template slots with data from param map
+		Template_int_Output(info, tpl_data);
+	
+		// Clean up	
+		Template_int_Unload(tpl_data);
+	}
+	
+	@RETURN ;
+@}
+
+@}	// Class
+@}	// Namespace SpiderWeb
+
+// vim: ft=c

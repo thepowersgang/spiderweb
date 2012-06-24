@@ -1,0 +1,97 @@
+/*
+ * SpiderWeb
+ * - By John Hodge (thePowersGang)
+ * 
+ * File IO Object
+ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <spiderscript.h>
+#include "spiderweb_internal.h"
+
+@NAMESPACE IO
+@{
+
+@CLASS File
+@{
+
+typedef struct {
+	FILE	*FP;
+} t_obj_IO_File;
+
+//@ATTRIBUTE Integer offset;
+
+@CONSTRUCTOR (String Filename, String Mode)
+@{
+	tSpiderObject	*ret;
+	FILE	*fp;
+
+//	printf("fopen('%.*s', '%.*s')\n", (int)Filename->Length, Filename->Data, (int)Mode->Length, Mode->Data);
+	// TODO: Better validation of input data
+	// TODO: What if the strings aren't NULL terminated?
+	fp = fopen(Filename->Data, Mode->Data);
+	if( !fp ) {
+//		perror("Opening for script");
+		// TODO: Exception
+		@RETURN NULL;
+	}
+	
+	ret = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(t_obj_IO_File));
+	if( !ret )	@RETURN NULL;
+	
+	((t_obj_IO_File*)ret->OpaqueData)->FP = fp;
+	
+	*(tSpiderInteger*)ret->Attributes[0] = 0;
+	
+	@RETURN ret;
+@}
+
+@DESTRUCTOR
+@{
+	t_obj_IO_File	*info = this->OpaqueData;
+	fclose( info->FP );
+@}
+
+@FUNCTION String Read(Integer Size)
+@{
+	t_obj_IO_File	*info;
+	tSpiderString	*ret;
+	
+	info = this->OpaqueData;
+	
+	ret = SpiderScript_CreateString(Size, NULL);
+	ret->Length = fread(ret->Data, 1, Size, info->FP);
+	
+	@RETURN ret;
+@}
+
+@FUNCTION Integer Seek(Integer Offset, Integer Direction)
+@{
+	t_obj_IO_File	*info;
+	 int	dir;
+	
+	info = this->OpaqueData;
+	
+	if(Direction < 0)	dir = SEEK_END;
+	if(Direction > 0)	dir = SEEK_SET;
+	if(Direction == 0)	dir = SEEK_CUR;
+	
+	fseek(info->FP, Offset, dir);
+
+	@RETURN ftell(info->FP);
+@}
+
+@FUNCTION Integer Write(String Data)
+@{
+	t_obj_IO_File	*info;
+	
+	info = this->OpaqueData;
+	
+	@RETURN fwrite(Data->Data, 1, Data->Length, info->FP);
+@}
+
+@}	// Object
+@}	// Namespace
+
+// vim: ft=c

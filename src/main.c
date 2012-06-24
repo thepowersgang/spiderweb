@@ -13,16 +13,18 @@
 
 // === PROTOTYPES ===
  int	ParseArguments(int argc, char *argv[]);
+void	SpiderWeb_AppendClass(tSpiderClass *FirstClass);
 
 // === GLOBALS ===
-extern tSpiderClass	g_obj_IO_File;
-extern tSpiderClass	g_obj_Template;
+extern tSpiderClass	*gpfileio_FirstClass;
+extern tSpiderClass	*gptemplate_object_FirstClass;
+extern tSpiderClass	*gpmysql_FirstClass;
 extern tSpiderFunction	gScript_IO_Print;
 extern tSpiderFunction	gScript_IO_ReadLine;
 
 tSpiderVariant	gScriptVariant = {
 	"SpiderWeb",
-	0, 1,	// Static Typed, Implicit casts allowed
+	1,	// Implicit casts allowed
 	NULL,	// Functions
 	NULL,	// Classes
 	NULL,	// ReadConstant
@@ -36,7 +38,7 @@ char	*gsCacheFile;
 /**
  * \brief Program Entrypoint
  */
-int main(int argc, char *argv[])
+int main(int argc, char *argv[], char **envp)
 {
 	 int	rv;
 	tSpiderScript	*script = NULL;
@@ -45,18 +47,22 @@ int main(int argc, char *argv[])
 	rv = ParseArguments(argc, argv);
 	if( rv )	return rv;
 
-	// TODO: Parse CGI values?
+	// Parse CGI values
 	// - Maybe delay until CGI::ReadGET,CGI::ReadPOST are used	
+	Module_CGI_Initialise();
+
 
 	// Prepare script engine
 	// - Register functions
 	SpiderWeb_AppendFunction(&gScript_IO_Print);
 	SpiderWeb_AppendFunction(&gScript_IO_ReadLine);
 	
-	// - Register classes (less elegant)
-	gScriptVariant.Classes = &g_obj_IO_File;
-	g_obj_IO_File.Next = &g_obj_Template;
-	g_obj_Template.Next = NULL;
+	// - Register classes
+	// > NOTE: Order matters, they must be in the opposite order to the makefile order
+	// TODO: Remove the above restriction
+	SpiderWeb_AppendClass(gpmysql_FirstClass);
+	SpiderWeb_AppendClass(gptemplate_object_FirstClass);
+	SpiderWeb_AppendClass(gpfileio_FirstClass);
 
 	if( gbCacheCompiled )
 	{
@@ -101,8 +107,10 @@ int main(int argc, char *argv[])
 	}
 
 	// Execute
-	ret = SpiderScript_ExecuteFunction(script, "", NULL, 0, NULL, NULL, 1);
-	SpiderScript_FreeValue(ret);
+	tSpiderInteger	ret;
+	 int	argt[] = {};
+	const void	*args[] = {};
+	SpiderScript_ExecuteFunction(script, "", &ret, 0, argt, args, NULL);
 	SpiderScript_Free(script);
 	
 	return 0;
@@ -162,57 +170,76 @@ void SpiderWeb_AppendFunction(tSpiderFunction *Function)
 	Function->Next = NULL;
 }
 
+void SpiderWeb_AppendClass(tSpiderClass *FirstClass)
+{
+	tSpiderClass	*e, *p = NULL;
+	for( e = gScriptVariant.Classes; e; p = e, e = e->Next )
+	{
+		if( e == FirstClass )	return ;	// TODO: Flag a bug report
+	}
+	if( p )
+		p->Next = FirstClass;
+	else
+		gScriptVariant.Classes = FirstClass;
+}
+
 /**
  * \brief Sets a template parameter
  */
 SCRIPT_METHOD("IO@Print", IO_Print, SS_DATATYPE_STRING, 0)
 {
-//	printf("NArgs = %i\n", NArgs);
-	if(NArgs < 1)	return ERRPTR;
-//	printf("Args[0] = Type%i\n", Args[0] ? Args[0]->Type : 0);
-	if(!Args[0] || Args[0]->Type != SS_DATATYPE_STRING)	return ERRPTR;
+	if(NArgs != 1) {
+		fprintf(stderr, "IO@Print - NArgs bad %i != 1\n", NArgs);
+		return -1;
+	}
+	if(!Args[0] || ArgTypes[0] != SS_DATATYPE_STRING) {
+		fprintf(stderr, "IO@Print - Args[0] 0x%x %p not SS_DATATYPE_STRING\n",
+			ArgTypes[0], Args[0]);
+		return -1;
+	}
 	
-	// TODO: Send headers
-//	CGI_SendHeadersOnce();
+	// Send headers
+	CGI_SendHeadersOnce();
 
-	fwrite(Args[0]->String.Data, Args[0]->String.Length, 1, stdout);
+	const tSpiderString	*s = Args[0];
+	fwrite(s->Data, s->Length, 1, stdout);
 	
-	return NULL;
+	return 0;
 }
 
 SCRIPT_METHOD_EX(SS_DATATYPE_STRING, "IO@ReadLine", IO_ReadLine, 0)
 {
-	tSpiderValue	*ret = NULL;
-	tSpiderValue	*tv;
+	tSpiderString	*ret = NULL;
+	tSpiderString	*tv;
 	char	tmpbuf[sizeof(*tv)+BUFSIZ];
 
 	tv = (void*)tmpbuf;
-	tv->Type = SS_DATATYPE_STRING;
-	tv->String.Data[0] = '\0';
-	tv->String.Length = 0;
+	tv->Data[0] = '\0';
+	tv->Length = 0;
 
-	while( tv->String.Data[tv->String.Length-1] != '\n' )
+	while( tv->Data[tv->Length-1] != '\n' )
 	{
-		fgets(tv->String.Data, BUFSIZ, stdin);
+		fgets(tv->Data, BUFSIZ, stdin);
 
-		tv->String.Length = strlen(tv->String.Data);
+		tv->Length = strlen(tv->Data);
 
 		if(ret) {
-			tSpiderValue	*new;
+			tSpiderString	*new;
 			new = SpiderScript_StringConcat(ret, tv);
-			SpiderScript_FreeValue(ret);
+			SpiderScript_DereferenceString(ret);
 			ret = new;
 		}
 		else
-			ret = SpiderScript_CreateString(tv->String.Length, tv->String.Data);
+			ret = SpiderScript_CreateString(tv->Length, tv->Data);
 	}
 	
-	return ret;
+	*(tSpiderString**)RetData = ret;
+	return SS_DATATYPE_STRING;
 }
 
 SCRIPT_METHOD("IO@ScanF", IO_ScanF, SS_DATATYPE_STRING, 0)
 {
 	// TODO: Implement
-	return NULL;
+	return -1;
 }
 

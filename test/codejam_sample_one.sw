@@ -5,6 +5,7 @@
 // http://code.google.com/codejam/contest/351101/dashboard#s=p0
 
 Integer $test_case_count = (Integer)IO.ReadLine();
+IO.Print((String)$test_case_count + " text cases\n");
 
 Integer	$case;
 

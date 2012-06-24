@@ -1,0 +1,111 @@
+body {
+ margin: 20px;
+ color: #000;
+ background-color: #FFFFFD;
+}
+a[href] {
+ color: #F80;
+}
+a.disabled {
+ color: #CCC;
+}
+h1 {
+ text-align: center;
+}
+table.layout td {
+ vertical-align: top;
+}
+div {
+}
+div.raised {
+ margin: 10px;
+ padding: 10px;
+ border: 1px solid #000;
+ background-color: #EEF;
+ text-align: center;
+ -moz-border-radius:20px;-webkit-border-radius:20px;border-radius:20px;;
+}
+span.right {
+ float: right;
+}
+span.error {
+ color: #F00;
+}
+div#header {
+ color: #FE1;
+ background-color: #44C;
+ width: 100%;
+ clear: both;
+ text-align: center;
+ border-bottom: 1px solid #FFF;
+ -moz-border-radius:10px;-webkit-border-radius:10px;border-radius:10px;;
+}
+div#menubar {
+ color: #FFF;
+ background-color: #44F;
+ width: 100%;
+ padding-top: 2px;
+ padding-bottom: 2px;
+ -moz-border-radius:5px;-webkit-border-radius:5px;border-radius:5px;;
+}
+div#menubar>div {
+ padding-left: 10px;
+ padding-right: 10px;
+}
+div#menubar a , div#submenu a {
+ color: #FF0;
+}
+div#submenu {
+ background-color: #66F;
+ width: 100%;
+ margin-top: 4px;
+ padding-top: 2px;
+ padding-bottom: 2px;
+}
+div#content {
+ padding-left: 10px;
+ float: left;
+}
+div#footer {
+ width: 100%;
+ font-size: small;
+ clear: both;
+ text-align: center;
+ border: 1px solid #000;
+ background-color: #EEF;
+}
+span.blog_title {
+ font-size: large;
+ display: block;
+}
+span.blog_byline {
+ font-size: small;
+ font-style: italic;
+ display: block;
+ float: left;
+}
+span.blog_editctls {
+ font-size: small;
+ float: right;
+ display: block;
+}
+p.blog_content {
+ clear: both;
+}
+tr.bug_level_0 { background: #FFFFFF; }
+tr.bug_level_1 { background: #FFF8F8; }
+tr.bug_level_2 { background: #FFF0F0; }
+tr.bug_level_3 { background: #FFE0E0; }
+tr.bug_level_4 { background: #FFD0D0; }
+tr.bug_level_5 { background: #FFC0C0; }
+tr.bug_level_6 { background: #FF9090; }
+tr.bug_level_7 { background: #FF7070; }
+tr.bug_level_8 { background: #FF5050; }
+tr.bug_level_9 { background: #FF4040; }
+tr.bug_level_0 a, tr.bug_level_1 a,
+tr.bug_level_2 a, tr.bug_level_3 a,
+tr.bug_level_4 a, tr.bug_level_5 a,
+tr.bug_level_6 a, tr.bug_level_7 a,
+tr.bug_level_8 a, tr.bug_level_9 a {
+ color: #118;
+}
