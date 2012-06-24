@@ -42,7 +42,6 @@ int main(int argc, char *argv[], char **envp)
 {
 	 int	rv;
 	tSpiderScript	*script = NULL;
-	tSpiderValue	*ret;
 	
 	rv = ParseArguments(argc, argv);
 	if( rv )	return rv;
