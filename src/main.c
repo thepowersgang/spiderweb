@@ -109,7 +109,22 @@ int main(int argc, char *argv[], char **envp)
 	tSpiderInteger	ret;
 	 int	argt[] = {};
 	const void	*args[] = {};
-	SpiderScript_ExecuteFunction(script, "", &ret, 0, argt, args, NULL);
+	rv = SpiderScript_ExecuteFunction(script, "", &ret, 0, argt, args, NULL);
+	if( rv < 0 )
+	{
+		const char *msg;
+		CGI_SendHeadersOnce();
+		switch( (rv = SpiderScript_GetException(script, &msg)) )
+		{
+		case SS_EXCEPTION_NONE:
+			printf("BUG - _ExecuteFunction returned <0, but no exception\n");
+			break;
+		default:
+			printf("Unknown Exception %i: %s\n", rv, msg);
+			break;
+		}
+		SpiderScript_ClearException(script);
+	}
 	SpiderScript_Free(script);
 	
 	return 0;

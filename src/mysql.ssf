@@ -7,6 +7,8 @@
  */
 #include <mysql/mysql.h>
 #include <stdio.h>
+#include <string.h>
+
 @NAMESPACE SpiderWeb
 @{
 
@@ -60,6 +62,13 @@ int gi_mysql_object_count = 0;
 		if( gi_mysql_object_count == 0 )
 			mysql_library_end();
 	@}
+
+	@FUNCTION String LastErrorString()
+	@{
+		t_mysql_obj	*info = this->OpaqueData;
+		const char *errstr = mysql_error(&info->Handle);
+		@RETURN SpiderScript_CreateString(strlen(errstr), errstr);
+	@}
 	
 	@FUNCTION void SetDatabase(String Database)
 	@{
@@ -81,7 +90,6 @@ int gi_mysql_object_count = 0;
 		if( rv ) {
 			// Some sort of error
 			// TODO: Exception
-			printf("SpiderWeb.MySQL->Query Error %s\n", mysql_error(&info->Handle));
 			@RETURN NULL;
 		}
 		
