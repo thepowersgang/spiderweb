@@ -11,6 +11,7 @@ Lang.StringMap[] Blog_GetLatest(SpiderWeb.MySQL $dbconn, Integer $page, Integer 
 	if( $r === null )
 	{
 		IO.Print("MySQL Query failed, query was " + $q + "<br/>\n");
+		IO.Print("Reason: " + $dbconn->LastErrorString() + "<br/>\n\n");
 		Lang.StringMap	$posts[];
 		return $posts;
 	}
@@ -18,6 +19,7 @@ Lang.StringMap[] Blog_GetLatest(SpiderWeb.MySQL $dbconn, Integer $page, Integer 
 	Integer	$post_count = $r->ResultCount();
 	Lang.StringMap $posts[$post_count];
 	Integer $i;
+	
 	for( $i = 0; $i < $post_count; $i ++ )
 	{
 		String $row[] = $r->GetNextRow();
