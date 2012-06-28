@@ -1,0 +1,59 @@
+/*
+ * SpiderWeb Scripting Suite
+ * - By John Hodge (thePowersGang)
+ * 
+ * misc.ssf
+ * - Misc functions
+ */
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <spiderweb_internal.h>
+
+@NAMESPACE IO
+@{
+
+/**
+ * \brief Sets a template parameter
+ */
+@FUNCTION void Print(String s)
+@{
+	// Send headers
+	CGI_SendHeadersOnce();
+
+	fwrite(s->Data, s->Length, 1, stdout);
+	
+	@RETURN ;
+@}
+
+@FUNCTION String ReadLine()
+@{
+	tSpiderString	*ret = NULL;
+	tSpiderString	*tv;
+	char	tmpbuf[sizeof(*tv)+BUFSIZ];
+
+	tv = (void*)tmpbuf;
+	tv->Data[0] = '\0';
+	tv->Length = 0;
+
+	while( tv->Data[tv->Length-1] != '\n' )
+	{
+		fgets(tv->Data, BUFSIZ, stdin);
+
+		tv->Length = strlen(tv->Data);
+
+		if(ret) {
+			tSpiderString	*new;
+			new = SpiderScript_StringConcat(ret, tv);
+			SpiderScript_DereferenceString(ret);
+			ret = new;
+		}
+		else
+			ret = SpiderScript_CreateString(tv->Length, tv->Data);
+	}
+
+	@RETURN ret;	
+@}
+
+@}
+// vim: ft=c

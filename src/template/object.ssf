@@ -7,8 +7,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../spiderweb_internal.h"
-#include "template_common.h"
+#include <spiderweb_internal.h>
+#include <template/template_common.h>
 
 @NAMESPACE SpiderWeb
 @{

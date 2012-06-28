@@ -2,17 +2,17 @@
 # SpiderWeb - Web targeted SpiderScript variant
 #
 
-OBJ := main.o fileio.gen.o
-OBJ += template/load.o template/object.gen.o template/run.o template/common.o
+OBJ := main.o
+OBJ += template/load.o template/run.o template/common.o
 OBJ += module_cgi.o
-OBJ += mysql.gen.o
 BIN = ../sw
 
-EXPORT_FILES := $(filter %.gen.o,$(OBJ))
+EXPORT_FILES := misc.ssf mysql.ssf template/object.ssf fileio.ssf cgi.ssf
 EXPORT_FILES := $(EXPORT_FILES:%.gen.o=%.ssf)
 
+OBJ += $(patsubst %.c,%.o,.exports/_index.c $(EXPORT_FILES:%.ssf=.exports/%.c))
+OBJ := $(addprefix $(OBJDIR),$(OBJ))
 OBJ := $(OBJ:%=obj/%)
-
 DEPFILES=$(OBJ:%=%.dep)
 
 CPPFLAGS += -I .. -I .
@@ -29,21 +29,29 @@ all: $(BIN)
 
 clean:
 	$(RM) $(BIN) $(OBJ) $(DEPFILES)
-	$(RM) -r obj/
+	$(RM) -r obj/ .exports/
 
 $(BIN): $(OBJ)
 	$(CC) -o $(BIN) $(OBJ) $(LDFLAGS)
 
 types.gen.h: $(EXPORT_FILES) $(GENSFCNS)
-	perl $(GENSFCNS) -makeheader types.gen.h $(EXPORT_FILES)
+	@mkdir -p $(dir $@)
+	perl $(GENSFCNS) --mkhdr $@ $(EXPORT_FILES)
 
-%.gen.c: %.ssf types.gen.h $(GENSFCNS)
-	perl $(GENSFCNS) -H types.gen.h -nc -p $(subst /,_,$*) $< $@
+.exports/_index.c: $(EXPORT_FILES) $(GENSFCNS)
+	@mkdir -p $(dir $@)
+	perl $(GENSFCNS) -H types.gen.h --mkidx $@ $(EXPORT_FILES)
+
+.exports/%.c: %.ssf types.gen.h $(GENSFCNS)
+	@mkdir -p $(dir $@)
+	perl $(GENSFCNS) -H types.gen.h $@ $<
 
 obj/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ -c $<
 	@$(CC) $(CPPFLAGS) -M -MF $@.dep $<
+
+obj/.exports/_index.c: types.gen.h
 
 -include $(DEPFILES)
 
