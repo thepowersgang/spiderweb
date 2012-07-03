@@ -30,6 +30,15 @@ int Template_int_RunSec_Arith(t_obj_Template *State, struct s_tplop_arith *Arith
 		*ValuePtr = "true";
 		return MAPENT_STRING;
 	
+	case ARITHOP_CMPNE:
+		*ValuePtr = "true";
+		lt = Template_int_RunSec(State, Arith->Left, &lv);
+		rt = Template_int_RunSec(State, Arith->Right, &rv);
+		if( lt != MAPENT_STRING && lt != rt )	return MAPENT_STRING;
+		if( strcmp(lv, rv) != 0 )	return MAPENT_STRING;
+		*ValuePtr = NULL;
+		return 0;
+	
 	case ARITHOP_FIELD:
 		lt = Template_int_RunSec(State, Arith->Left, &lv);
 		rt = Template_int_RunSec(State, Arith->Right, &rv);
@@ -58,6 +67,7 @@ int Template_int_RunSec_Arith(t_obj_Template *State, struct s_tplop_arith *Arith
 		}
 		return ent->Type;
 	default:
+		printf("Template Error: Unimplimented BinOp %i\n", Arith->Operation);
 		break;
 	}
 	return 0;

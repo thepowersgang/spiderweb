@@ -20,10 +20,10 @@
  </div>
  <div id="menubar"><div>
   <a href="index.ss" class="{?$PageID=="index"?"selected":""}">Home</a>
-  <a href="history.ss">History</a>
-  <a href="downloads.ss">Downloads</a>
-  <a href="docs.ss">Documentation</a>
-  <a href="screens.ss">Pictures</a>
+  <a href="history.ss" class="{?$PageID=="history"?"selected":""}">History</a>
+  <a href="downloads.ss" class="{?$PageID=="downloads"?"selected":""}">Downloads</a>
+  <a href="docs.ss" class="{?$PageID=="docs"?"selected":""}">Documentation</a>
+  <a href="screens.ss" class="{?$PageID=="screens"?"selected":""}">Pictures</a>
   <a href="bugs.ss">Bug Reports</a>
 {* <a href="forums.php">Forums</a> *}
   <span class="right">
@@ -38,5 +38,9 @@
   </span>
  </div></div>
  <div id="body">
+{if $PageID != "index"}
+<h2>{$PageTitle}</h2>
+{endif}
+
 {* vim: ft=html
 *}

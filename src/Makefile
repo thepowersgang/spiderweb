@@ -23,7 +23,7 @@ GENSFCNS := ../libspiderscript/tools/gen_scriptfcns.pl
 
 .PHONY: all clean install
 
-.PRECIOUS: mysql.gen.c template/object.gen.c
+.PRECIOUS: $(EXPORT_FILES:%.ssf=.exports/%.c)) exports/_index.c
 
 all: $(BIN)
 
@@ -50,8 +50,6 @@ obj/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ -c $<
 	@$(CC) $(CPPFLAGS) -M -MF $@.dep $<
-
-obj/.exports/_index.c: types.gen.h
 
 -include $(DEPFILES)
 

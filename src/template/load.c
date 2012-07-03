@@ -614,6 +614,7 @@ t_template *Template_int_Load(const char *Filename)
 	 int	ctrl_end;
 	 int	ctrl_start;
 	FILE	*rootfp;
+	FILE	*fp, *lastfp;
 	 int	i, j;
 	t_template	*ret;
 	t_parserstate	state;
@@ -634,9 +635,10 @@ t_template *Template_int_Load(const char *Filename)
 	state.CurList = &ret->Sections;
 
 	ofs = 0;
+	fp = rootfp;
+	lastfp = NULL;
 	for( ;; )
 	{
-		FILE	*fp;
 		const char	*thisfile;
 		if( state.FStackPos ) {
 			fp = state.FStack[ state.FStackPos - 1 ].FP;
@@ -646,6 +648,11 @@ t_template *Template_int_Load(const char *Filename)
 			fp = rootfp;
 			thisfile = Filename;
 		}
+		if( fp != lastfp && lastfp ) {
+			fseek(lastfp, -ofs, SEEK_CUR);
+			ofs = 0;
+		}
+		lastfp = fp;
 		
 		int len = fread(buffer + ofs, 1, BUFSIZ - ofs, fp);
 
@@ -658,11 +665,14 @@ t_template *Template_int_Load(const char *Filename)
 				state.FStackPos --;
 				fclose(state.FStack[state.FStackPos].FP);
 				free(state.FStack[state.FStackPos].Filename);
+				lastfp = NULL;
 				continue ;
 			}
 			break;
 		}
 
+		int cur_fstackpos = state.FStackPos;
+		
 		ctrl_end = 0;
 		ctrl_start = -1;
 		for( i = 0; i < ofs + len; i ++ )
@@ -711,7 +721,7 @@ t_template *Template_int_Load(const char *Filename)
 				buffer[ctrl_end] = '\0';
 
 				ctrl_data = buffer + ctrl_start + 1;
-
+		
 				void *listhead = Template_int_ParseStatement(&state, Filename, ctrl_data);
 				if( listhead == NULL ) {
 					fprintf(stderr, "Something bad happened\n");
@@ -730,8 +740,18 @@ t_template *Template_int_Load(const char *Filename)
 				i = ctrl_end;
 				if( i + 1 < ofs + len && buffer[i+1] == '\n' )
 					i ++;
+				
+				// Detect when an include statement is hit
+				if( cur_fstackpos < state.FStackPos ) {
+					ofs = (ofs + len) - ctrl_end;	// Tell the fseek where to reset to
+					break ;	// Read again
+				}
 			}
 		}
+		
+		// Detect an include statement (and don't output anything else after it)
+		if( cur_fstackpos < state.FStackPos )
+			continue ;	// Read again
 		
 		if( ctrl_start == -1 )
 			_addVerbatim(state.CurList, buffer + ctrl_end, (ofs + len) - ctrl_end);

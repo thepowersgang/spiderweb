@@ -9,6 +9,12 @@ a[href] {
 a.disabled {
  color: #CCC;
 }
+a.selected {
+ text-decoration: none;
+}
+a.selected:hover {
+ text-decoration: underline;
+}
 h1 {
  text-align: center;
 }
