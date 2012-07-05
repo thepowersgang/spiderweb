@@ -724,6 +724,9 @@ t_template *Template_int_Load(const char *Filename)
 				}
 
 				ctrl_start = i;
+				// Slightly hackily ignore newlines before a statement
+				if( i - ctrl_end && buffer[i-1] == '\n' )
+					i --;
 				_addVerbatim(state.CurList, buffer + ctrl_end, i - ctrl_end);
 				ctrl_end = 0;
 				for( j = i; j < ofs+len; j ++ )
