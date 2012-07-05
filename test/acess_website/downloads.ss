@@ -28,8 +28,7 @@ Lang.StringMap _loadRelease(String $ID)
 	// Load	release notes
 	IO.File	$fp("releases/"+$ID+".txt", "r");
 	if( $fp === null ) {
-		delete $ret;
-		return $ret;
+		return null;
 	}
 	String $notes = $fp->Read(2000);
 	$ret->set("Desc", Lang.Strings.SubStr($notes, 0, Lang.Strings.Search($notes, "\n")));

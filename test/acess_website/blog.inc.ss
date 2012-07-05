@@ -12,8 +12,7 @@ Lang.StringMap[] Blog_GetLatest(SpiderWeb.MySQL $dbconn, Integer $page, Integer 
 	{
 		IO.Print("MySQL Query failed, query was " + $q + "<br/>\n");
 		IO.Print("Reason: " + $dbconn->LastErrorString() + "<br/>\n\n");
-		Lang.StringMap[]	$posts;
-		return $posts;
+		return null;
 	}
 
 	Integer	$post_count = $r->ResultCount();
