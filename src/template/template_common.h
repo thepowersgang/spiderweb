@@ -29,7 +29,7 @@ enum e_map_entry_types
 	MAPENT_UNSET,
 	MAPENT_VECTOR,	// Vector
 	MAPENT_STRING,	// String
-	MAPENT_POINTER	// Indirect vector
+	MAPENT_POINTER	// Indirect value
 };
 
 /**
@@ -38,7 +38,7 @@ enum e_map_entry_types
 struct s_map_entry {
 	t_map_entry	*Next;
 	char	*Key;	// Key is stored after value
-	enum e_map_entry_types	Type;	// 0: Unset, 1: Vector, 2: String, 3: Indirect vector
+	enum e_map_entry_types	Type;
 	union {
 		t_map	SubMap;
 		t_map_entry	*Ptr;
@@ -55,6 +55,7 @@ enum e_tplop_types
 	TPLOP_VALUEOUT,
 	TPLOP_ITERATOR,
 	TPLOP_CONDITIONAL,
+	TPLOP_ASSIGN,
 	
 	TPLOP_CONSTANT,
 	TPLOP_GETVALUE,
@@ -82,6 +83,7 @@ typedef union u_tplop  	t_tplop;
 typedef struct s_tplop_const	t_tplop_const;
 typedef struct s_tplop_value	t_tplop_value;
 typedef struct s_tplop_output	t_tplop_output;
+typedef struct s_tplop_assign	t_tplop_assign;
 typedef struct s_tplop_iter	t_tplop_iter;
 typedef struct s_tplop_cond	t_tplop_cond;
 typedef struct s_tplop_arith	t_tplop_arith;
@@ -107,13 +109,20 @@ struct s_tplop_output
 	t_tplop	*Value;
 };
 
+struct s_tplop_assign
+{
+	S_TPLSEC_HDR
+	union u_tplop	*Value;
+	char	Name[];
+};
+
 struct s_tplop_iter
 {
 	S_TPLSEC_HDR
 	union u_tplop	*Array;
-	char	*ItemName;
 	union u_tplop	*PerItem;
 	union u_tplop	*IfEmpty;
+	char	ItemName[];
 };
 
 struct s_tplop_cond
@@ -140,6 +149,7 @@ union u_tplop
 	struct s_tplop_const	Constant;
 	struct s_tplop_value	Value;
 	struct s_tplop_output	Output;
+	struct s_tplop_assign	Assign;
 	struct s_tplop_iter	Iterator;
 	struct s_tplop_cond	Conditional;
 	struct s_tplop_arith	Arith;

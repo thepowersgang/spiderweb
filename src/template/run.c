@@ -49,7 +49,7 @@ int Template_int_RunSec_Arith(t_obj_Template *State, struct s_tplop_arith *Arith
 
 		t_map_entry *ent = Template_int_GetMapItem(lv, rv);
 		if( !ent ) {
-			*ValuePtr = "BADINDEX";
+			*ValuePtr = NULL;
 			return 0;
 		}
 		switch(ent->Type)
@@ -153,6 +153,9 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 		return 0;
 	case TPLOP_ARITH:
 		return Template_int_RunSec_Arith(State, &Section->Arith, ValuePtr);
+	case TPLOP_ASSIGN:
+		// TODO: Support {assign $var = <value>}
+		return 0;
 	}
 	return 0;
 }

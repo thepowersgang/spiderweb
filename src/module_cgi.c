@@ -15,6 +15,9 @@
 char	*gsCGI_GETData;
  int	giCGI_GETNArgs;
 tCGI_Param	*gaCGI_GETArgs;
+char	*gsCGI_POSTData;
+ int	giCGI_POSTNArgs;
+tCGI_Param	*gaCGI_POSTArgs;
 
 // === CODE ===
 int CGI_int_UnURLEncode(const char *Source, int SourceLen, char *Dest)
@@ -126,6 +129,35 @@ void CGI_ParseGETData(void)
 	CGI_int_ParseQueryString(query, gsCGI_GETData, &giCGI_GETNArgs, gaCGI_GETArgs);
 }
 
+void CGI_ParsePOSTData(void)
+{
+	CGI_SendHeadersOnce();	
+	
+	if( !gbCGI_IsInvokedAsCGI )	return ;
+	if( gsCGI_POSTData )	return ;
+
+	gsCGI_POSTData = (void*)-1;
+
+	if( strcmp(getenv("REQUEST_METHOD"), "POST") != 0 )
+		return ;
+
+	const char *lenstr = getenv("CONTENT_LENGTH");
+	if( !lenstr )	return ;
+	int len = atoi( lenstr );
+	if( len <= 0 )	return ;
+	
+	char *query = malloc(len+1);
+	fread(query, 1, len, stdin);
+	query[len] = 0;
+
+	
+	int datalen = CGI_int_ParseQueryString(query, NULL, &giCGI_POSTNArgs, NULL);
+	
+	gsCGI_POSTData = malloc(datalen);
+	gaCGI_POSTArgs = malloc( sizeof(*gaCGI_POSTArgs) * giCGI_POSTNArgs );
+	CGI_int_ParseQueryString(query, gsCGI_POSTData, &giCGI_POSTNArgs, gaCGI_POSTArgs);
+}
+
 void CGI_SendHeadersOnce(void)
 {
 	static int	bHeadersSent = 0;
@@ -141,7 +173,6 @@ void CGI_SendHeadersOnce(void)
 
 	bHeadersSent = 1;
 }
-
 
 void Module_CGI_Initialise(void)
 {

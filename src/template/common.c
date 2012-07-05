@@ -154,6 +154,9 @@ void Template_int_FreeSec(t_tplop *Section)
 		Template_int_FreeSec(Section->Arith.Left);
 		Template_int_FreeSec(Section->Arith.Right);
 		break;
+	case TPLOP_ASSIGN:
+		Template_int_FreeSec(Section->Assign.Value);
+		break;
 	}
 	free(Section);
 }

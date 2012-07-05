@@ -126,6 +126,18 @@ int gi_mysql_object_count = 0;
 		
 		@RETURN ret;
 	@}
+	
+	@FUNCTION String Escape(String Input)
+	@{
+		t_mysql_obj	*info = this->OpaqueData;
+		if( !Input )
+			@RETURN NULL;
+		
+		// This is space inefficent, but mysql_real_escape_string requires a buffer this size)
+		tSpiderString *ret = SpiderScript_CreateString(Input->Length*2+1, NULL);
+		ret->Length = mysql_real_escape_string(&info->Handle, ret->Data, Input->Data, Input->Length);
+		@RETURN ret;
+	@}
 @}
 
 @NAMESPACE MySQL

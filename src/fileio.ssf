@@ -5,6 +5,7 @@
  * File IO Object
  */
 #include <stdio.h>
+#include <dirent.h>
 #include <stdlib.h>
 #include <string.h>
 #include <spiderscript.h>
@@ -20,78 +21,123 @@ typedef struct {
 	FILE	*FP;
 } t_obj_IO_File;
 
-//@ATTRIBUTE Integer offset;
+//	@ATTRIBUTE Integer offset;
 
-@CONSTRUCTOR (String Filename, String Mode)
+	@CONSTRUCTOR (String Filename, String Mode)
+	@{
+		tSpiderObject	*ret;
+		FILE	*fp;
+
+		// TODO: Better validation of input data
+		// TODO: What if the strings aren't NULL terminated?
+		fp = fopen(Filename->Data, Mode->Data);
+		if( !fp ) {
+//			perror("Opening for script");
+			// TODO: Exception
+			@RETURN NULL;
+		}
+		
+		ret = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(t_obj_IO_File));
+		if( !ret )	@RETURN NULL;
+		
+		((t_obj_IO_File*)ret->OpaqueData)->FP = fp;
+		
+//		*(tSpiderInteger*)ret->Attributes[0] = 0;
+		
+		@RETURN ret;
+	@}
+
+	@DESTRUCTOR
+	@{
+		t_obj_IO_File	*info = this->OpaqueData;
+		fclose( info->FP );
+	@}
+
+	@FUNCTION String Read(Integer Size)
+	@{
+		t_obj_IO_File	*info;
+		tSpiderString	*ret;
+		
+		info = this->OpaqueData;
+		
+		ret = SpiderScript_CreateString(Size, NULL);
+		ret->Length = fread(ret->Data, 1, Size, info->FP);
+		
+		@RETURN ret;
+	@}
+
+	@FUNCTION Integer Seek(Integer Offset, Integer Direction)
+	@{
+		t_obj_IO_File	*info;
+		 int	dir;
+		
+		info = this->OpaqueData;
+		
+		if(Direction < 0)	dir = SEEK_END;
+		if(Direction > 0)	dir = SEEK_SET;
+		if(Direction == 0)	dir = SEEK_CUR;
+		
+		fseek(info->FP, Offset, dir);
+
+		@RETURN ftell(info->FP);
+	@}
+
+	@FUNCTION Integer Write(String Data)
+	@{
+		t_obj_IO_File	*info;
+		
+		info = this->OpaqueData;
+		
+		@RETURN fwrite(Data->Data, 1, Data->Length, info->FP);
+	@}
+
+@}	// CLASS File
+
+@CLASS Directory
 @{
-	tSpiderObject	*ret;
-	FILE	*fp;
+	typedef struct {
+		DIR	*dp;
+	} t_obj_IO_Directory;
+	
+	@CONSTRUCTOR (String Path)
+	@{
+		DIR	*dp = opendir(Path->Data);
+		if(!dp) {
+			// TODO: Exception
+			@RETURN NULL;
+		}		
 
-//	printf("fopen('%.*s', '%.*s')\n", (int)Filename->Length, Filename->Data, (int)Mode->Length, Mode->Data);
-	// TODO: Better validation of input data
-	// TODO: What if the strings aren't NULL terminated?
-	fp = fopen(Filename->Data, Mode->Data);
-	if( !fp ) {
-//		perror("Opening for script");
-		// TODO: Exception
-		@RETURN NULL;
-	}
-	
-	ret = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(t_obj_IO_File));
-	if( !ret )	@RETURN NULL;
-	
-	((t_obj_IO_File*)ret->OpaqueData)->FP = fp;
-	
-	*(tSpiderInteger*)ret->Attributes[0] = 0;
-	
-	@RETURN ret;
-@}
+		tSpiderObject *this = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(t_obj_IO_Directory));
+		if( !this )	@RETURN NULL;
+		t_obj_IO_Directory	*info = this->OpaqueData;
+		
+		info->dp = dp;
+		
+		@RETURN this;
+	@}
 
-@DESTRUCTOR
-@{
-	t_obj_IO_File	*info = this->OpaqueData;
-	fclose( info->FP );
-@}
+	@DESTRUCTOR
+	@{
+		t_obj_IO_Directory	*info = this->OpaqueData;
+		
+		closedir(info->dp);
+	@}
+	
+	@FUNCTION String Read()
+	@{
+		t_obj_IO_Directory	*info = this->OpaqueData;
+		struct dirent *ent;
+		
+		ent = readdir(info->dp);
+		if( !ent ) {
+			// Not an exception condition
+			@RETURN NULL;
+		}
 
-@FUNCTION String Read(Integer Size)
-@{
-	t_obj_IO_File	*info;
-	tSpiderString	*ret;
-	
-	info = this->OpaqueData;
-	
-	ret = SpiderScript_CreateString(Size, NULL);
-	ret->Length = fread(ret->Data, 1, Size, info->FP);
-	
-	@RETURN ret;
-@}
+		@RETURN SpiderScript_CreateString(strlen(ent->d_name), ent->d_name);
+	@}
+@}	// CLASS Directory
 
-@FUNCTION Integer Seek(Integer Offset, Integer Direction)
-@{
-	t_obj_IO_File	*info;
-	 int	dir;
-	
-	info = this->OpaqueData;
-	
-	if(Direction < 0)	dir = SEEK_END;
-	if(Direction > 0)	dir = SEEK_SET;
-	if(Direction == 0)	dir = SEEK_CUR;
-	
-	fseek(info->FP, Offset, dir);
-
-	@RETURN ftell(info->FP);
-@}
-
-@FUNCTION Integer Write(String Data)
-@{
-	t_obj_IO_File	*info;
-	
-	info = this->OpaqueData;
-	
-	@RETURN fwrite(Data->Data, 1, Data->Length, info->FP);
-@}
-
-@}	// Object
-@}	// Namespace
+@}	// NAMESPACE IO
 
 // vim: ft=c

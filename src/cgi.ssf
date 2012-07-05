@@ -7,6 +7,9 @@
  */
 #include <module_cgi.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 @NAMESPACE CGI
 @{
@@ -40,8 +43,147 @@
 
 @FUNCTION String ReadPOST(String Name)
 @{
-	Name = NULL;
+	 int	i;
+	CGI_ParsePOSTData();
+	
+	for( i = 0; i < giCGI_POSTNArgs; i ++ )
+	{
+		if( strncmp(gaCGI_POSTArgs[i].Name, Name->Data, Name->Length) != 0 )
+			continue ;
+		if( strlen(gaCGI_POSTArgs[i].Name) != Name->Length )
+			continue ;
+		
+		@RETURN SpiderScript_CreateString(gaCGI_POSTArgs[i].DataLen, gaCGI_POSTArgs[i].Data);
+	}
 	@RETURN NULL;
+@}
+
+@CLASS Session
+@{
+	typedef struct s_session_value
+	{
+		struct s_session_value	*Next;
+		const tSpiderString	*Value;
+		size_t	KeyLength;
+		char	Key[];
+	} t_session_value;
+	typedef struct
+	{
+		t_session_value	*Values;
+		char	session_file[];
+	} t_session_info;
+
+//	@ATTRIBUTE Lang.StringMap Values;
+	
+	@CONSTRUCTOR (String Tag)
+	@{
+		if( Tag->Length != 0 ) {
+//			printf("TODO: Impliment session tags\n");
+			@RETURN NULL;
+		}
+
+		t_session_info *info;
+		tSpiderObject *this = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(*info) + 1);
+		if( !this )	return -1;
+		info = this->OpaqueData;
+		info->Values = NULL;
+		info->session_file[0] = '\0';
+
+		// TODO: Load from a file
+
+		@RETURN this;
+	@}
+	
+	@DESTRUCTOR
+	@{
+		t_session_info *info = this->OpaqueData;
+		t_session_value	*v, *n;
+		
+		// TODO: Write out data
+		
+		// Clear local values
+		for(v = info->Values; v; v = n)
+		{
+			n = v->Next;
+			SpiderScript_DereferenceString(v->Value);
+			free(v);
+		}
+	@}
+	
+	@FUNCTION String Get(String Key)
+	@{
+		t_session_info *info = this->OpaqueData;
+		t_session_value	*v;
+
+		if( !Key )	@RETURN NULL;
+		
+		for( v = info->Values; v; v = v->Next )
+		{
+			if( v->KeyLength != Key->Length )
+				continue ;
+			if( memcmp(v->Key, Key->Data, Key->Length) != 0 )
+				continue ;
+			SpiderScript_ReferenceString(v->Value);
+			@RETURN v->Value;
+		}
+
+		@RETURN NULL;
+	@}
+	
+	@FUNCTION void Set(String Key, String Value)
+	@{
+		t_session_info *info = this->OpaqueData;
+		t_session_value	*v, *p = NULL;
+
+		if( !Key )	@RETURN ;
+		
+		for( v = info->Values; v; p = v, v = v->Next )
+		{
+			if( v->KeyLength != Key->Length )
+				continue ;
+			if( strncmp(v->Key, Key->Data, Key->Length) != 0 )
+				continue ;
+			
+			SpiderScript_DereferenceString(v->Value);
+			v->Value = Value;
+			SpiderScript_ReferenceString(v->Value);
+			
+			@RETURN;
+		}
+		
+		v = malloc( sizeof(t_session_value) + Key->Length );
+		v->KeyLength = Key->Length;
+		memcpy(v->Key, Key->Data, Key->Length);
+		v->Value = Value;
+		SpiderScript_ReferenceString(v->Value);
+		v->Next = NULL;
+		if(p)
+			p->Next = v;
+		else
+			info->Values = v;
+	@}
+	
+	@FUNCTION void Unset(String Key)
+	@{
+		t_session_info *info = this->OpaqueData;
+		t_session_value	*v, *p = NULL;
+
+		if( !Key )	@RETURN ;
+		
+		for( v = info->Values; v; p = v, v = v->Next )
+		{
+			if( v->KeyLength != Key->Length )
+				continue ;
+			if( strncmp(v->Key, Key->Data, Key->Length) != 0 )
+				continue ;
+			
+			SpiderScript_DereferenceString(v->Value);
+			p->Next = v->Next;
+			free(v);
+			
+			@RETURN;
+		}
+	@}
 @}
 
 @}

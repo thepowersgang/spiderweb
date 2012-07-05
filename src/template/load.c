@@ -11,6 +11,7 @@
 #include <string.h>
 #include <setjmp.h>	// used for error handling
 #include <assert.h>
+#include <ctype.h>
 
 typedef struct sParser
 {
@@ -38,6 +39,7 @@ enum eTokens
 	TOK_FIELD,
 	TOK_SQUARE_O,	TOK_SQUARE_C,
 	TOK_PAREN_O,	TOK_PAREN_C,
+	TOK_ASSIGN,
 
 	TOK_NOT,
 	TOK_AND, TOK_OR,
@@ -119,7 +121,7 @@ int Template_int_GetToken(tParser *Parser)
 		switch( Parser->CurState.Pos[len++] )
 		{
 		case '=': rv = TOK_CMPEQ; break;
-		default:  return -1;
+		default:  rv = TOK_ASSIGN; len --; break;
 		}
 		break;
 	case '<':
@@ -525,7 +527,6 @@ t_tplop **Template_int_ParseStatement(t_parserstate *State, const char *Filename
 			iter->Type = TPLOP_ITERATOR;
 			iter->Next = NULL;
 			iter->Array = array;
-			iter->ItemName = (void*)(iter + 1);
 			memcpy(iter->ItemName, Parser->CurState.TokenStr+1, Parser->CurState.TokenLen-1);
 			iter->ItemName[Parser->CurState.TokenLen-1] = 0;
 			iter->PerItem = NULL;
@@ -571,6 +572,23 @@ t_tplop **Template_int_ParseStatement(t_parserstate *State, const char *Filename
 			}
 			State->BStackPos --;
 			return State->BStack[State->BStackPos].List;
+		}
+		else if( CMPTOK("assign") )
+		{
+			assert( Template_int_GetToken(Parser) == TOK_VARIABLE );
+			
+			t_tplop_assign	*assign;
+			assign = malloc( sizeof(*assign) + Parser->CurState.TokenLen-1 + 1 );
+			assign->Type = TPLOP_ASSIGN;
+			assign->Next = NULL;
+			
+			memcpy(assign->Name, Parser->CurState.TokenStr+1, Parser->CurState.TokenLen-1);
+			assign->Name[Parser->CurState.TokenLen-1] = 0;
+			
+			
+			assert( Template_int_GetToken(Parser) == TOK_ASSIGN );
+			assign->Value = Template_int_ParseExpr(Parser);
+			Template_int_AppendOp(State->CurList, (t_tplop*)assign);
 		}
 		else {
 	default:
@@ -699,7 +717,7 @@ t_template *Template_int_Load(const char *Filename)
 						i = ctrl_end;
 						continue ;
 					}
-					else if( buffer[i+1] == ' ' ) {
+					else if( isblank(buffer[i+1]) ) {
 						// Treat as normal text is there's a space after '{'
 						continue ;
 					}
