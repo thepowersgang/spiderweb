@@ -9,7 +9,7 @@ $tpl->Assign("PageID", "index");
 
 $tpl->Display("templates/header.tpl");
 
-Lang.StringMap	$posts[];
+Lang.StringMap[]	$posts;
 $posts = Blog_GetLatest($dbconn, 0, 3);
 $tpl->Assign("NewsItems", $posts);
 

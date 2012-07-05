@@ -48,7 +48,7 @@ if( CGI.ReadPOST("username") !== null )
 		return 0;
 	}
 
-	String $row[] = $r->GetNextRow();
+	String[] $row = $r->GetNextRow();
 	if( $row !== null )
 	{
 		$gSession->Set("uid", $row[0]);

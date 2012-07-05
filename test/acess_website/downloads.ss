@@ -66,7 +66,7 @@ if( $lRequestedRelease === null )
 
 	// Get all the previous releases in the release directory
 	Integer $nReleases = 0;
-	String $releases[(Integer)$lLatestID];
+	String[] $releases( (Integer)$lLatestID );
 	
 	IO.Directory $dp("releases");
 	if( $dp === null )
@@ -91,7 +91,7 @@ if( $lRequestedRelease === null )
 	$releases = Lang.SortStrings($releases);
 
 	// Load the description for each previous release
-	Lang.StringMap $lPreviousReleases[$nReleases];
+	Lang.StringMap[] $lPreviousReleases ($nReleases);
 	for( Integer $i = 0; $i < $nReleases; $i ++ )
 	{
 		$lPreviousReleases[$i] = _loadRelease( $releases[$i] );

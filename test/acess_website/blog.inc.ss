@@ -12,17 +12,17 @@ Lang.StringMap[] Blog_GetLatest(SpiderWeb.MySQL $dbconn, Integer $page, Integer 
 	{
 		IO.Print("MySQL Query failed, query was " + $q + "<br/>\n");
 		IO.Print("Reason: " + $dbconn->LastErrorString() + "<br/>\n\n");
-		Lang.StringMap	$posts[];
+		Lang.StringMap[]	$posts;
 		return $posts;
 	}
 
 	Integer	$post_count = $r->ResultCount();
-	Lang.StringMap $posts[$post_count];
+	Lang.StringMap[] $posts($post_count);
 	Integer $i;
 	
 	for( $i = 0; $i < $post_count; $i ++ )
 	{
-		String $row[] = $r->GetNextRow();
+		String[] $row = $r->GetNextRow();
 		if( $row === null )	continue;
 			
 		$posts[$i] = new Lang.StringMap();
