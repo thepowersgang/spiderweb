@@ -1,7 +1,7 @@
 #!/usr/local/bin/sw
 #<?php
 
-SpiderWeb.Template $tpl = new SpiderWeb.Template();
+include "common.inc.ss";
 
 $tpl->Assign("PageTitle", "History");
 $tpl->Assign("PageID", "history");

@@ -27,7 +27,7 @@
   <a href="bugs.ss">Bug Reports</a>
 {* <a href="forums.php">Forums</a> *}
   <span class="right">
-{if $UserName!=""}
+{if $UserName != ""}
    Welcome <i>{$UserName}</i>
    <a href="usercp.ss">User CP</a>
    <a href="login.ss?logout&amp;lastpage={$PagePathEnc}">Logout</a>

@@ -1,10 +1,8 @@
 #!/usr/local/bin/sw
 #<?php
 
-include "database.inc.ss";
+include "common.inc.ss";
 include "blog.inc.ss";
-
-SpiderWeb.Template $tpl = new SpiderWeb.Template();
 
 $tpl->Assign("PageTitle", "Index");
 $tpl->Assign("PageID", "index");
