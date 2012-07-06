@@ -12,8 +12,10 @@
 #define ARRAY_SIZE(x)	((sizeof(x))/(sizeof((x)[0])))
 
 // === PROTOTYPES ===
+ int	main(int argc, char *argv[], char **envp);
  int	ParseArguments(int argc, char *argv[]);
-void	SpiderWeb_AppendClass(tSpiderClass *FirstClass);
+void	HandleErrorMessage(tSpiderScript *Script, const char *Message);
+
 
 // === GLOBALS ===
 extern int	giNumExportedClasses;
@@ -24,10 +26,9 @@ extern tSpiderFunction	*gapExportedFunctions;
 tSpiderVariant	gScriptVariant = {
 	"SpiderWeb",
 	1,	// Implicit casts allowed
-	0,
-	&gapExportedFunctions,	// Functions
-	0,
-	&gapExportedClasses,	// Classes
+	HandleErrorMessage,
+	0, &gapExportedFunctions,	// Functions - count filled in main()
+	0, &gapExportedClasses, 	// Classes - same again
 	NULL,	// ReadConstant
 	0, {},	// Global (namespaceless) Constants
 };
@@ -36,6 +37,7 @@ char	*gsScriptFile;
 char	*gsCacheFile;
  int	gbCacheCompiled;
 
+// === CODE ===
 /**
  * \brief Program Entrypoint
  */
@@ -154,4 +156,11 @@ int ParseArguments(int argc, char *argv[])
 		}
 	}
 	return 0;
+}
+
+void HandleErrorMessage(tSpiderScript *Script, const char *Message)
+{
+	CGI_SendHeadersOnce();
+	// TODO: HTML Prettyness?
+	printf("Runtime Error: %s\n", Message);
 }
