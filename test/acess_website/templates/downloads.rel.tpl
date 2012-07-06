@@ -1,4 +1,4 @@
-<a href="{$gRelDir}Acess2_{$lRelease.ID}.tar.gz">Source Code</a> [tar.gz]<br />
+<a href="/Downloads/Acess2/Acess2_{$lRelease.ID}.tar.gz">Source Code</a> [tar.gz]<br />
 Binaries
 <ul>
  <li>
