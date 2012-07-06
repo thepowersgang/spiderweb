@@ -118,7 +118,12 @@ int main(int argc, char *argv[], char **envp)
 		}
 		SpiderScript_ClearException(script);
 	}
+	
 	SpiderScript_Free(script);
+	if( gbCacheCompiled )
+	{
+		free(gsCacheFile);
+	}
 	
 	return 0;
 }
