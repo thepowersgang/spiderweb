@@ -20,9 +20,9 @@ for($case = 1; $case <= $test_case_count; $case ++ )
 	$credits = (Integer)IO.ReadLine();
 	$item_count = (Integer)IO.ReadLine();
 	
-	String	$item_costs_s[] = Lang.Strings.Split( IO.ReadLine(), " " );
+	String[]	$item_costs_s = Lang.Strings.Split( IO.ReadLine(), " " );
 
-	Integer	$item_costs[$item_count];
+	Integer[]	$item_costs($item_count);
 	for( $i = 0; $i < $item_count; $i ++ )
 	{
 		$item_costs[$i] = (Integer)$item_costs_s[$i];

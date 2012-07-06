@@ -93,3 +93,4 @@ IO.Print("\n");
 return 20;
 
 #?>
+# vim: ft=php
