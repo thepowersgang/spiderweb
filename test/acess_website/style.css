@@ -15,9 +15,6 @@ a.selected {
 a.selected:hover {
  text-decoration: underline;
 }
-h1 {
- text-align: center;
-}
 table.layout td {
  vertical-align: top;
 }
@@ -45,6 +42,9 @@ div#header {
  text-align: center;
  border-bottom: 1px solid #FFF;
  -moz-border-radius:10px;-webkit-border-radius:10px;border-radius:10px;;
+}
+div#header h1 {
+ text-align: center;
 }
 div#menubar {
  color: #FFF;

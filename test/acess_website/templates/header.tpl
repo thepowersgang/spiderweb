@@ -39,7 +39,7 @@
  </div></div>
  <div id="body">
 {if $PageID != "index"}
-<h2>{$PageTitle}</h2>
+<h1>{$PageTitle}</h1>
 {endif}
 
 {* vim: ft=html
