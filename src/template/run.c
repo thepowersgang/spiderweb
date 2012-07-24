@@ -135,7 +135,7 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 		return 0;
 	case TPLOP_ITERATOR:
 		rv = Template_int_RunSec(State, Section->Iterator.Array, &ptr);
-		if( rv != MAPENT_VECTOR || ptr == NULL ) {
+		if( rv != MAPENT_VECTOR || ptr == NULL || !((t_map*)ptr)->FirstEnt ) {
 			Template_int_RunSecList(State, Section->Iterator.IfEmpty);
 		}
 		else {
