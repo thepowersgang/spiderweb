@@ -96,6 +96,7 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 		fwrite(Section->Constant.Data, 1, Section->Constant.Length, stdout);
 		return 0;
 	case TPLOP_VALUEOUT:
+		// TODO: Filters?
 		rv = Template_int_RunSec(State, Section->Output.Value, &ptr);
 		if( rv == MAPENT_STRING )	fputs(ptr, stdout);
 		return 0;
