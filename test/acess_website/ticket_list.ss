@@ -28,6 +28,9 @@ for(Integer $i = 0; ($row = $res->GetNextRow()) !== null; $i++)
 	Lang.StringMap	$ticket();
 
 	$ticket->set("ID", $row[0]);
+	$ticket->set("title", $row[1]);
+	$ticket->set("type",   $row[3]);
+	$ticket->set("status", $row[4]);
 
 	$tickets[$i] = $ticket;
 }

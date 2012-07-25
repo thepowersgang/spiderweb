@@ -4,7 +4,7 @@
 include "common.inc.ss";
 $tpl->Assign("PageID", "bugs");
 
-String $lTicketID = CGI.ReadGET("ticket");
+String $lTicketID = CGI.ReadGET("id");
 if($lTicketID === null)
 {
 	$tpl->Assign("ErrorMessage", "Please select a ticket");
@@ -29,5 +29,17 @@ if( $row === null ) {
 	$tpl->Display("templates/error.tpl");
 	return 0;
 }
+
+String	$lTicketTitle = $row[0];
+String	$lTicketDesc = $row[1];
+
+$tpl->Assign("PageTitle", $lTicketTitle);
+
+Lang.StringMap	$lTicket();
+$lTicket->set("title", $lTicketTitle);
+$lTicket->set("desc", $lTicketDesc);
+
+$tpl->Assign("lTicket", $lTicket);
+$tpl->Display("templates/ticket_view.tpl");
 
 # vim: ft=php

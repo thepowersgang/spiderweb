@@ -10,6 +10,9 @@
 {foreach $lTicketList as $ticket}
 <tr>
  <td><a href="ticket_view.ss?id={$ticket.ID}">{$ticket.ID}</a></td>
+ <td>{$ticket.title}</td>
+ <td>{$ticket.type}</td>
+ <td>{$ticket.status}</td>
 </tr>
 {foreachelse}
 <tr>
