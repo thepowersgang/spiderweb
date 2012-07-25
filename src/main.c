@@ -105,6 +105,7 @@ int main(int argc, char *argv[], char **envp)
 	 int	argt[] = {};
 	const void	*args[] = {};
 	rv = SpiderScript_ExecuteFunction(script, "", &ret, 0, argt, args, NULL);
+	CGI_SendHeadersOnce();
 	if( rv < 0 )
 	{
 		const char *msg;
