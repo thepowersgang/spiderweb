@@ -12,7 +12,7 @@ if($lTicketID === null)
 	return 0;
 }
 
-String $query = "SELECT ticket_title,ticket_desc,ticket_tags,ticket_type"
+String $query = "SELECT ticket_title,ticket_desc,ticket_type,ticket_project,ticket_tags"
 		+",ticket_status,ticket_opened"
 		+",ticket_owner,ticket_filer"
 		+" FROM tickets WHERE ticket_id="+(Integer)$lTicketID+" LIMIT 1";
@@ -30,16 +30,22 @@ if( $row === null ) {
 	return 0;
 }
 
-String	$lTicketTitle = $row[0];
-String	$lTicketDesc = $row[1];
+String	$lTicketTitle   = $row[0];
+String	$lTicketDesc    = formatText($row[1]);
+String	$lTicketType    = $row[2];
+String	$lTicketProject = $row[3];
+String	$lTicketStatus  = $row[5];
 
-$tpl->Assign("PageTitle", $lTicketTitle);
+$tpl->Assign("PageTitle", "View Ticket");
 
 Lang.StringMap	$lTicket();
-$lTicket->set("title", $lTicketTitle);
-$lTicket->set("desc", $lTicketDesc);
-
+$lTicket->set("title",   $lTicketTitle);
+$lTicket->set("desc",    $lTicketDesc);
+$lTicket->set("type",    $lTicketType);
+$lTicket->set("project", $lTicketProject);
+$lTicket->set("status", $lTicketStatus);
 $tpl->Assign("lTicket", $lTicket);
+
 $tpl->Display("templates/ticket_view.tpl");
 
 # vim: ft=php

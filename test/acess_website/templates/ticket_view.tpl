@@ -1,14 +1,33 @@
 {include "header.tpl"}
 
-<div class="ticket_info">
-{* <span class="ticket_title">{$lTicket.title}</span> *}
-<span class="ticket_opened">{$lTicket.opened}</span>
-<span class="ticket_filer">Filed by {$lTicket.filer}</span>
-<span class="ticket_owner">Owned by {$lTicket.owner}</span>
-<div class="ticket_desc">
+      <a href="bugs.tpl">Tickets</a>
+-&gt; <a href="ticket_list?prj={$lTicket.project}">{$lTicket.project}</a>
+-&gt; <a href="ticket_list?prj={$lTicket.project}&amp;type={$lTicket.type}">{$lTicket.type}</a>
+-&gt; <b>{$lTicket.title}</b>
+
+<table>
+ <tr>
+  <th>Title</th>
+  <td>{$lTicket.title}</td>
+ </tr>
+ <tr>
+  <th>Status</th>
+  <td>{$lTicket.status}</td>
+ </tr>
+ <tr>
+  <th>Filed</th>
+  <td>{$lTicket.opened} by {$lTicket.filer}</td>
+ </tr>
+ <tr>
+  <th>Owner</th>
+  <td>{$lTicket.owner}</td>
+ </tr>
+ <tr>
+  <td colspan="2">
 {$lTicket.desc}
-</div>
-</div>
+  </td>
+ </tr>
+</table>
 
 {foreach $lComments as $comment}
 <div class="ticket_comment">

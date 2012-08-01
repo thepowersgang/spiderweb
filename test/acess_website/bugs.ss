@@ -14,8 +14,6 @@ if( $res === null ) {
 	return 0;
 }
 
-IO.Print((String)$res->ResultCount());
-
 Lang.StringMap[]	$laProjects($res->ResultCount()+1);
 String[]	$row;
 for( Integer $i = 0; ($row = $res->GetNextRow()); $i ++ )
@@ -42,7 +40,7 @@ for( Integer $i = 0; ($row = $res->GetNextRow()); $i ++ )
 		$prj->set($row2[0]+"_"+$row2[1], $row2[2]);
 	}
 	
-	IO.Print("$i = "+$i);
+//	IO.Print("$i = "+$i);
 	$laProjects[$i] = $prj;
 }
 

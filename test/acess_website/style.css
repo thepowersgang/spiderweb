@@ -1,5 +1,6 @@
 body {
- margin: 20px;
+ margin-left: 60px;
+ margin-right: 60px;
  color: #000;
  background-color: #FFFFFD;
 }
@@ -68,9 +69,10 @@ div#submenu {
  padding-top: 2px;
  padding-bottom: 2px;
 }
-div#content {
- padding-left: 10px;
- float: left;
+div#body {
+ padding-left: 60px;
+ padding-right: 60px;
+ padding-bottom: 20px;
 }
 div#footer {
  width: 100%;
@@ -98,20 +100,5 @@ span.blog_editctls {
 p.blog_content {
  clear: both;
 }
-tr.bug_level_0 { background: #FFFFFF; }
-tr.bug_level_1 { background: #FFF8F8; }
-tr.bug_level_2 { background: #FFF0F0; }
-tr.bug_level_3 { background: #FFE0E0; }
-tr.bug_level_4 { background: #FFD0D0; }
-tr.bug_level_5 { background: #FFC0C0; }
-tr.bug_level_6 { background: #FF9090; }
-tr.bug_level_7 { background: #FF7070; }
-tr.bug_level_8 { background: #FF5050; }
-tr.bug_level_9 { background: #FF4040; }
-tr.bug_level_0 a, tr.bug_level_1 a,
-tr.bug_level_2 a, tr.bug_level_3 a,
-tr.bug_level_4 a, tr.bug_level_5 a,
-tr.bug_level_6 a, tr.bug_level_7 a,
-tr.bug_level_8 a, tr.bug_level_9 a {
- color: #118;
-}
+tr.ticket_new>td { background: #FDB; }
+tr.ticket_open>td { background: #FFF; }
