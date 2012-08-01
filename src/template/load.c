@@ -46,6 +46,8 @@ enum eTokens
 	TOK_CMPEQ, TOK_CMPNE,
 	TOK_CMPLE, TOK_CMPLT,
 	TOK_CMPGE, TOK_CMPGT,
+	
+	TOK_PIPE
 };
 
 // === PROTOTYPES ===
@@ -98,6 +100,9 @@ int Template_int_GetToken(tParser *Parser)
 	Parser->CurState.TokenStr = Parser->CurState.Pos;
 	switch( Parser->CurState.Pos[len++] )
 	{
+	case '|':
+		rv = TOK_PIPE;
+		break;
 	case '$':	// Variable
 		while( issymchar(Parser->CurState.Pos[len]) )
 			len ++;
@@ -593,8 +598,16 @@ t_tplop **Template_int_ParseStatement(t_parserstate *State, const char *Filename
 		else {
 	default:
 			Template_int_PutBack(&parser_state);
+			t_tplop	*op = Template_int_NewOutput( Template_int_ParseExpr(&parser_state) );
+			while( Template_int_GetToken(Parser) == TOK_PIPE )
+			{
+				assert( Template_int_GetToken(Parser) == TOK_IDENT );
+				// Apply modifiers
+//				Template_int_AddModifier(op, Parser->CurState.TokenStr, Parser->CurState.TokenLen);
+			}
+			Template_int_PutBack(Parser);
 			// Output stuff
-			Template_int_AppendOp(State->CurList, Template_int_NewOutput( Template_int_ParseExpr(&parser_state) ));
+			Template_int_AppendOp(State->CurList, op);
 		}
 		break;
 	#undef CMPTOK
