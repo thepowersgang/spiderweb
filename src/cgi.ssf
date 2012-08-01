@@ -10,6 +10,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+
+const char	*gsCGI_SessionDir = "/tmp/spiderweb/sessions";
 
 @NAMESPACE CGI
 @{
@@ -18,9 +21,33 @@
 @{
 	// "QUERY_STRING" and "REQUEST_METHOD"
 	Name = Value;
-	return 0;
 @}
 
+@FUNCTION String GetCookie(String Name)
+@{
+	if( !Name || Name->Length == 0 )
+		@RETURN NULL;
+
+	// HTTP Header 'Cookie'	
+	// getenv(HTTP_COOKIE) split by ';' characters
+
+	// Requires reading the headers
+	@RETURN NULL;
+@}
+
+@FUNCTION void SetCookie(String Name, String Value, Integer Timeout)
+@{
+	if( !Name || Name->Length == 0 )
+		return 0;
+	if( !Value )
+		return 0;
+	if( Timeout < 0 )
+		return 0;
+
+	// Name and value need to be URI encoded	
+	// add header "Set-Cookie: `Name`=`Value`; expires=`date(Timeout)`
+//	CGI_AddHeader("Set-Cookie: %s=%s; expires=%s; path=%s", 
+@}
 
 @FUNCTION String ReadGET(String Name)
 @{
@@ -70,24 +97,89 @@
 	typedef struct
 	{
 		t_session_value	*Values;
+		const tSpiderString	*Hash;
 		char	session_file[];
 	} t_session_info;
 
-//	@ATTRIBUTE Lang.StringMap Values;
+//	@ATTRIBUTE String	Hash;
+
+	static int session_hashvalid(const char *str, size_t length)
+	{
+		for(; length--; str++ )
+		{
+			if( !isalnum(*str) )
+				return 0;
+		}
+		return 1;
+	}
+	static void session_makehash(char *dest, size_t length)
+	{
+		const char pool[] = "abcdefghijklmnopqrstuvwxyz0123456789";
+		for(; length--; dest++)
+		{
+			*dest = pool[rand()%sizeof(pool)];
+		}
+	}
 	
-	@CONSTRUCTOR (String Tag)
+	@CONSTRUCTOR (String Hash, String Tag)
 	@{
-		if( Tag->Length != 0 ) {
-//			printf("TODO: Impliment session tags\n");
+		 int	bSaveHash = 0;
+		if( !Hash ) {
+//			Hash = @CALL CGI.GetCookie("SWSESSIONID");
+		}
+		if( !Hash || Hash->Length != 32 || !session_hashvalid(Hash->Data, Hash->Length) ) {
+			if( Hash )
+				SpiderScript_DereferenceString(Hash);
+			Hash = SpiderScript_CreateString(32, NULL);
+			session_makehash((void*)Hash->Data, 32);
+			bSaveHash = 1;
+		}
+		else {
+			// All good
+		}
+		if( bSaveHash ) {
+//			@CALL CGI.SetCookie("SWSESSIONID", Hash, 3600);
+		}
+		
+		// Length sanity check
+		if( strnlen(Tag->Data, Tag->Length) != Tag->Length ) {
+			@RETURN NULL;
+		}
+		// Content sanity
+		if( memchr(Tag->Data, '/', Tag->Length) != NULL ) {
 			@RETURN NULL;
 		}
 
+		// Get length of session path
+		int pathlen = strlen(gsCGI_SessionDir) + 1 + Hash->Length + 1;
+		if( Tag && Tag->Length > 0 ) {
+			pathlen += Tag->Length + 1;
+		}
+		else {
+			pathlen += 1 + 1;
+		}
+
+		// Create object
 		t_session_info *info;
-		tSpiderObject *this = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(*info) + 1);
+		tSpiderObject *this = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(*info) + pathlen);
 		if( !this )	return -1;
 		info = this->OpaqueData;
 		info->Values = NULL;
-		info->session_file[0] = '\0';
+		info->Hash = Hash;
+		
+		// Create path
+		strcpy(info->session_file, gsCGI_SessionDir);
+		strcat(info->session_file, "/");
+		strncat(info->session_file, Hash->Data, Hash->Length);
+		strcat(info->session_file, "/");
+		if( Tag && Tag->Length > 0 ) {
+			strncat(info->session_file, Tag->Data, Tag->Length);
+		}
+		else {
+			strcat(info->session_file, "_");
+		}
+
+//		printf("info->session_file = %s\n", info->session_file);
 
 		// TODO: Load from a file
 
@@ -108,6 +200,7 @@
 			SpiderScript_DereferenceString(v->Value);
 			free(v);
 		}
+		SpiderScript_DereferenceString(info->Hash);
 	@}
 	
 	@FUNCTION String Get(String Key)
