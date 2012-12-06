@@ -38,7 +38,7 @@ types.gen.h: $(EXPORT_FILES) $(GENSFCNS)
 	@mkdir -p $(dir $@)
 	perl $(GENSFCNS) --mkhdr $@ $(EXPORT_FILES)
 
-.exports/_index.c: $(EXPORT_FILES) $(GENSFCNS)
+.exports/_index.c: $(EXPORT_FILES) types.gen.h $(GENSFCNS)
 	@mkdir -p $(dir $@)
 	perl $(GENSFCNS) -H types.gen.h --mkidx $@ $(EXPORT_FILES)
 
