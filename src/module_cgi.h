@@ -17,5 +17,7 @@ extern tCGI_Param	*gaCGI_POSTArgs;
 extern void	CGI_ParseGETData(void);
 extern void	CGI_ParsePOSTData(void);
 
+extern int	CGI_SetHeader(const char *Name, const char *Value);
+
 #endif
 

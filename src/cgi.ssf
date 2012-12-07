@@ -20,7 +20,16 @@ const char	*gsCGI_SessionDir = "/tmp/spiderweb/sessions";
 @FUNCTION void SetHeader(String Name, String Value)
 @{
 	// "QUERY_STRING" and "REQUEST_METHOD"
-	Name = Value;
+	if( !Name || Name->Length == 0 )
+		return 0;
+	if( !Value || Value->Length == 0 )
+		return 0;	
+
+	// TODO: Are these NULL-terminated?
+	int rv = CGI_SetHeader(Name->Data, Value->Data);
+	if( rv < 0 ) {
+		// TODO: Error, headers after output
+	}
 @}
 
 @FUNCTION String GetCookie(String Name)

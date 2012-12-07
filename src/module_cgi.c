@@ -18,6 +18,9 @@ tCGI_Param	*gaCGI_GETArgs;
 char	*gsCGI_POSTData;
  int	giCGI_POSTNArgs;
 tCGI_Param	*gaCGI_POSTArgs;
+char	*gsCGI_ContentType;
+ int	gbCGI_HeadersSent = 0;
+	
 
 // === CODE ===
 int CGI_int_UnURLEncode(const char *Source, int SourceLen, char *Dest)
@@ -160,18 +163,40 @@ void CGI_ParsePOSTData(void)
 
 void CGI_SendHeadersOnce(void)
 {
-	static int	bHeadersSent = 0;
-	
 	if( !gbCGI_IsInvokedAsCGI )
 		return ;
 	
-	if( bHeadersSent )
+	if( gbCGI_HeadersSent )
 		return ;
 
-	printf("Content-Type: text/html\n");
+	printf("Content-Type: %s\n", (gsCGI_ContentType ? gsCGI_ContentType : "text/html"));
 	printf("\n");
+	
+	if( gsCGI_ContentType )
+		free(gsCGI_ContentType);
 
-	bHeadersSent = 1;
+	gbCGI_HeadersSent = 1;
+}
+
+int CGI_SetHeader(const char *Name, const char *Value)
+{
+	if( gbCGI_HeadersSent )
+	{
+		return -1;
+	}
+
+	// TODO: Sanity check Name/Value
+
+	if( strcmp(Name, "Content-Type") == 0 ) {
+		if( gsCGI_ContentType )
+			free(gsCGI_ContentType);
+		gsCGI_ContentType = strdup(Value);
+	}
+	else {
+		// TODO: Append to list (or just output?)
+		printf("%s: %s", Name, Value);
+	}
+	return 0;
 }
 
 void Module_CGI_Initialise(void)

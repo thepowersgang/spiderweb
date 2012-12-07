@@ -7,17 +7,24 @@ OBJ += template/load.o template/run.o template/common.o
 OBJ += module_cgi.o
 BIN = ../sw
 
-EXPORT_FILES := misc.ssf mysql.ssf template/object.ssf fileio.ssf cgi.ssf
-EXPORT_FILES := $(EXPORT_FILES:%.gen.o=%.ssf)
+USE_MYSQL ?= yes
 
+EXPORT_FILES := misc.ssf template/object.ssf fileio.ssf cgi.ssf
+
+CPPFLAGS += -I .. -I .
+CFLAGS  += -Wall -Werror -g
+LDFLAGS += -L .. -lspiderscript -g
+
+ifeq ($(USE_MYSQL),yes)
+  EXPORT_FILES += mysql.ssf
+  LDFLAGS += -lmysqlclient
+endif
+
+EXPORT_FILES := $(EXPORT_FILES:%.gen.o=%.ssf)
 OBJ += $(patsubst %.c,%.o,.exports/_index.c $(EXPORT_FILES:%.ssf=.exports/%.c))
 OBJ := $(addprefix $(OBJDIR),$(OBJ))
 OBJ := $(OBJ:%=obj/%)
 DEPFILES=$(OBJ:%=%.dep)
-
-CPPFLAGS += -I .. -I .
-CFLAGS  += -Wall -Werror -g
-LDFLAGS += -L .. -lspiderscript -lmysqlclient -g
 
 GENSFCNS := ../libspiderscript/tools/gen_scriptfcns.pl
 
