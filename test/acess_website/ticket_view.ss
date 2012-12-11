@@ -30,20 +30,18 @@ if( $row === null ) {
 	return 0;
 }
 
-String	$lTicketTitle   = $row[0];
-String	$lTicketDesc    = formatText($row[1]);
-String	$lTicketType    = $row[2];
-String	$lTicketProject = $row[3];
-String	$lTicketStatus  = $row[5];
-
 $tpl->Assign("PageTitle", "View Ticket");
 
 Lang.StringMap	$lTicket();
-$lTicket->set("title",   $lTicketTitle);
-$lTicket->set("desc",    $lTicketDesc);
-$lTicket->set("type",    $lTicketType);
-$lTicket->set("project", $lTicketProject);
-$lTicket->set("status", $lTicketStatus);
+$lTicket->set("title",   $row[0]);
+$lTicket->set("desc",    formatText($row[1]));
+$lTicket->set("type",    $row[2]);
+$lTicket->set("project", $row[3]);
+// TODO: Tags
+$lTicket->set("status",  $row[5]);
+$lTicket->set("opened",  $row[6]);
+$lTicket->set("owner",   Ticket_GetUser($dbconn, (Integer)$row[7]));
+$lTicket->set("filer",   Ticket_GetUser($dbconn, (Integer)$row[8]));
 $tpl->Assign("lTicket", $lTicket);
 
 $tpl->Display("templates/ticket_view.tpl");

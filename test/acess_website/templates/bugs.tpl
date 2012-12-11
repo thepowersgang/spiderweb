@@ -13,12 +13,12 @@
  <td>{?$prj.bug_closed   ? $prj.bug_closed   :"0"}</td>
 </tr>
 <tr>
- <th><a href="ticket_list.ss?prj={$prj.ID}&amp;type=feat">Features</a></th>
- <td>{?$prj.feat_new      ? $prj.feat_new      :"0"}</td>
- <td>{?$prj.feat_accepted ? $prj.feat_accepted :"0"}</td>
- <td>{?$prj.feat_reviewing? $prj.feat_reviewing:"0"}</td>
- <td>{?$prj.feat_needswork? $prj.feat_needswork:"0"}</td>
- <td>{?$prj.feat_closed   ? $prj.feat_closed   :"0"}</td>
+ <th><a href="ticket_list.ss?prj={$prj.ID}&amp;type=feature">Features</a></th>
+ <td>{?$prj.feature_new      ? $prj.feature_new      :"0"}</td>
+ <td>{?$prj.feature_accepted ? $prj.feature_accepted :"0"}</td>
+ <td>{?$prj.feature_reviewing? $prj.feature_reviewing:"0"}</td>
+ <td>{?$prj.feature_needswork? $prj.feature_needswork:"0"}</td>
+ <td>{?$prj.feature_closed   ? $prj.feature_closed   :"0"}</td>
 </tr>
 <tr>
  <th><a href="ticket_list.ss?prj={$prj.ID}&amp;type=discussion">Discussions</a></th>

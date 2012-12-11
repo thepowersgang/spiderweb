@@ -10,13 +10,16 @@
  <meta name="Author" content="John Hodge (thePowersGang) - 20518201" />
  <meta name="Keywords" content="acess acess2 acessos thepowersgang operating-system" />
  <link rel="stylesheet" type="text/css" href="style.css" />
+{if $lAltStylesheet != ""}
+ <link rel="stylesheet" type="text/css" href="{$lAltStylesheet}" />
+{endif}
  <script type="text/javascript" src="script.js"></script>
  <link rel="alternate" title="Acess2 News RSS" href="blog.rss.sw" type="application/rss+xml" />
 </head>
 <body>
  <div id="header">
   <h1>Acess OS Project</h1>
-  <center>Lightweight and extensible Operating System</center>
+  <center>I know Access has two 'c's</center>
  </div>
  <div id="menubar"><div>
   <a href="index.ss" class="{?$PageID=="index"?"selected":""}">Home</a>

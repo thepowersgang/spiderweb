@@ -43,16 +43,30 @@ if( CGI.ReadPOST("username") !== null )
 		+" LIMIT 1";
 	SpiderWeb.MySQL.Result $r = $dbconn->Query($query);
 	if( $r === null ) {
-		IO.Print("MySQL Query failed, query was " + $query + "<br/>\n");
-		IO.Print("Reason: " + $dbconn->LastErrorString() + "<br/>\n\n");
+		$tpl->Assign("SQLQuery", $query);
+		$tpl->Assign("SQLError", $dbconn->LastErrorString());
+		$tpl->Display("templates/sqlerror.tpl");
 		return 0;
 	}
 
 	String[] $row = $r->GetNextRow();
 	if( $row !== null )
 	{
+		$gUserID = (Integer)$row[0];
+		$gUserName = $lUsername;
+		String $token = "TESTTOKEN";
+		String $q = "UPDATE users SET `token`='"+$dbconn->Escape($token)+"',`token_age`=NOW() WHERE uid="+$gUserID+" LIMIT 1";
+		if( $dbconn->Query($q) === null ) {
+			$tpl->Assign("SQLQuery", $q);
+			$tpl->Assign("SQLError", $dbconn->LastErrorString());
+			$tpl->Display("templates/sqlerror.tpl");
+			return 0;
+		}
+
 		$gSession->Set("uid", $row[0]);
 		$gSession->Set("username", $lUsername);
+		CGI.SetCookie("A2SW_USERNAME", $lUsername, 3600);
+		CGI.SetCookie("A2SW_AUTHTOK", $token, 3600);
 		$tpl->Display("templates/login_success.tpl");
 		return 0;
 	}

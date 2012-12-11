@@ -1,6 +1,9 @@
 #<?php
 
 include "database.inc.ss";
+SpiderWeb.Template $tpl();
+
+CGI.SetCookie("testcookie", "hello", 3600);
 
 String $gSessionHash = CGI.GetCookie("SWSESSIONID");
 CGI.Session $gSession($gSessionHash, "acess2sw");
@@ -12,9 +15,37 @@ String $gUserName = $gSession->Get("username");
 Integer $gUserID = (Integer)$gSession->Get("uid");
 
 if( $gUserName === null )
+{
+	$gUserName = CGI.GetCookie("A2SW_USERNAME");
+	String $authtoken = CGI.GetCookie("A2SW_AUTHTOK");
+	if( $gUserName !== null && $authtoken !== null )
+	{
+		String $q = "SELECT uid FROM users WHERE"
+			+" `username`='"+$dbconn->Escape($gUserName)+"'"
+			+" AND `token`='"+$dbconn->Escape($authtoken)+"'"
+			+" AND `token_age` > NOW() - INTERVAL 1 DAY";
+		SpiderWeb.MySQL.Result $r = $dbconn->Query($q);
+		if( $r === null ) {
+			$tpl->Assign("SQLQuery", $q);
+			$tpl->Assign("SQLError", $dbconn->LastErrorString());
+			$tpl->Display("templates/sqlerror.tpl");
+			return 0;
+		}
+		String[] $row = $r->GetNextRow();
+		if($row !== null)
+		{
+			$gUserID = (Integer)$row[0];
+		}
+		else
+		{
+			IO.Print("Bad cookie username/token "+$gUserName+"/"+$authtoken);
+		}
+	}
+}
+
+if( $gUserID == 0 || $gUserName === null )
 	$gUserName = "";
 
-SpiderWeb.Template $tpl();
 $tpl->Assign("UserName", $gUserName);
 
 
@@ -25,17 +56,33 @@ String formatText(String $Input)
 #	$output = Lang.Strings.RegexReplace($output, "^.*^", "<sup>$1</sup>");
 #	$output = Lang.Strings.RegexReplace($output, "_.*_", "<sub>$1</sub>");
 	$output = Lang.Strings.Replace($output, "\r\n", "\n");
+	$output = Lang.Strings.Replace($output, "{{{", "<span style='font-size:small;font-family:mono'>");
+	$output = Lang.Strings.Replace($output, "}}}", "</span>");
 	$output = Lang.Strings.Replace($output, "\n", "<br/>\n");
 	return $output;
 }
 
-String Ticket_GetUser(Integer $UID)
+String Ticket_GetUser(SpiderWeb.MySQL $dbconn, Integer $UID)
 {
+	String	$name;
 	if( $UID == 0 )
 	{
-		return "None";
+		$name = "None";
 	}
-	return "UID #"+$UID;
+	else
+	{
+		String $q = "SELECT username FROM users WHERE uid="+$UID;
+		SpiderWeb.MySQL.Result $res = $dbconn->Query($q);
+		String[] $row = $res->GetNextRow();
+		if( $row ) 
+			$name = $row[0];
+		else {
+			$name = "Unknown";
+			$UID = -1;
+		}
+	}
+	
+	return "<a href=\"users.ss?id="+$UID+"\">"+$name+"</a>";
 }
 
 # vim: ft=php

@@ -13,7 +13,12 @@ if( $lProject )
 	$query += " AND ticket_project='" + $dbconn->Escape(CGI.ReadGET("prj")) + "'";
 if( $lType )
 	$query += " AND ticket_type='" + $dbconn->Escape(CGI.ReadGET("type")) + "'";
-$tpl->Assign("lSortBase", "?prj="+$lProject+"&amp;type="+$lType+"&amp;sort=");
+$tpl->Assign("lTypeCodes", "prj="+$lProject+"&amp;type="+$lType+"&amp;");
+$tpl->Assign("lProject", $lProject);
+if( $lType )
+	$tpl->Assign("lType", $lType);
+else
+	$tpl->Assign("lType", "");
 
 String $lSort = CGI.ReadGET("sort");
 if( $lSort !== null )
@@ -48,11 +53,11 @@ for(Integer $i = 0; ($row = $res->GetNextRow()) !== null; $i++)
 
 	$ticket->set("ID", $row[0]);
 	$ticket->set("title", $row[1]);
-	$ticket->set("filer_name", Ticket_GetUser((Integer)$row[2]));	// TODO: Get username?
+	$ticket->set("filer", Ticket_GetUser($dbconn, (Integer)$row[2]));	// TODO: Get username?
 	$ticket->set("type",   $row[3]);
 	$ticket->set("status", $row[4]);
 	$ticket->set("opened", $row[5]);
-	$ticket->set("owner_name", Ticket_GetUser((Integer)$row[6]));
+	$ticket->set("owner", Ticket_GetUser($dbconn, (Integer)$row[6]));
 
 	$tickets[$i] = $ticket;
 }
