@@ -11,27 +11,55 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <time.h>
 
 const char	*gsCGI_SessionDir = "/tmp/spiderweb/sessions";
 
 @NAMESPACE CGI
 @{
 
-@FUNCTION void SetHeader(String Name, String Value)
+@FUNCTION void SetHeader(String Text)
 @{
 	// "QUERY_STRING" and "REQUEST_METHOD"
-	Name = Value;
+	if( !Text || Text->Length == 0 )
+		@RETURN ;
+	
+	CGI_AddHeader("%.*s", Text->Length, Text->Data);
+@}
+
+@FUNCTION String URLEscape(String Input)
+@{
+	if( !Input )
+		@RETURN NULL;
+
+	int len = CGI_int_URLEncode(Input->Data, Input->Length, NULL);
+	tSpiderString *ret = SpiderScript_CreateString(len, NULL);
+	CGI_int_URLEncode(Input->Data, Input->Length, ret->Data);
+
+	@RETURN ret;
 @}
 
 @FUNCTION String GetCookie(String Name)
 @{
+	 int	 i;
 	if( !Name || Name->Length == 0 )
 		@RETURN NULL;
 
-	// HTTP Header 'Cookie'	
-	// getenv(HTTP_COOKIE) split by ';' characters
+	CGI_ParseCookies();
 
-	// Requires reading the headers
+//	CGI_SendHeadersOnce();
+	
+	for( i = 0; i < giCGI_NCookies; i ++ )
+	{
+//		printf("'%.*s' == '%s'\n", (int)Name->Length, Name->Data, gaCGI_Cookies[i].Name);
+		if( strncmp(gaCGI_Cookies[i].Name, Name->Data, Name->Length) != 0 )
+			continue ;
+		if( strlen(gaCGI_Cookies[i].Name) != Name->Length )
+			continue ;
+		
+		@RETURN SpiderScript_CreateString(gaCGI_Cookies[i].DataLen, gaCGI_Cookies[i].Data);
+	}
+
 	@RETURN NULL;
 @}
 
@@ -44,9 +72,23 @@ const char	*gsCGI_SessionDir = "/tmp/spiderweb/sessions";
 	if( Timeout < 0 )
 		return 0;
 
-	// Name and value need to be URI encoded	
-	// add header "Set-Cookie: `Name`=`Value`; expires=`date(Timeout)`
-//	CGI_AddHeader("Set-Cookie: %s=%s; expires=%s; path=%s", 
+	time_t	exp = time(NULL) + Timeout;
+	struct tm *ts = gmtime(&exp);
+
+	 int	nlen = CGI_int_URLEncode(Name->Data, Name->Length, NULL);
+	 int	vlen = CGI_int_URLEncode(Value->Data, Value->Length, NULL);
+	 int	tlen = strftime(NULL, 0, "%a, %d %b %Y %H:%M:%S %Z", ts);
+	char	name[nlen+1];
+	char	value[vlen+1];
+	char	timeout[tlen+1];
+	CGI_int_URLEncode(Name->Data, Name->Length, name); name[nlen] = '\0';
+	CGI_int_URLEncode(Value->Data, Value->Length, value); value[vlen] = '\0';
+	strftime(timeout, tlen+1, "%a, %d %b %Y %H:%M:%S %Z", ts);
+
+
+	// Name and value need to be URI encoded
+	// add header "Set-Cookie: `Name`=`Value`; expires=`date(Timeout)`; path=???
+	CGI_AddHeader("Set-Cookie: %.*s=%.*s; expires=%s; path=%s", nlen, name, vlen, value, timeout, "/");
 @}
 
 @FUNCTION String ReadGET(String Name)

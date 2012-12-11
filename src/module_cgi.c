@@ -9,35 +9,103 @@
 #include <stdlib.h>
 #include <string.h>
 #include <module_cgi.h>
+#include <stdarg.h>
+#include <ctype.h>
 
 // === GLOBALS ===
  int	gbCGI_IsInvokedAsCGI = 0;
+ int	gbCGI_HeadersSent = 0;
 char	*gsCGI_GETData;
  int	giCGI_GETNArgs;
 tCGI_Param	*gaCGI_GETArgs;
 char	*gsCGI_POSTData;
  int	giCGI_POSTNArgs;
 tCGI_Param	*gaCGI_POSTArgs;
+char	*gsCGI_CookieData;
+ int	giCGI_NCookies;
+tCGI_Param	*gaCGI_Cookies;
 
 // === CODE ===
-int CGI_int_UnURLEncode(const char *Source, int SourceLen, char *Dest)
+inline int isvalidurlchar(char ch)
+{
+	if( ch < 0x20 )
+		return 0;
+	
+	if( ch > 128 )
+		return 0;
+	
+	switch(ch)
+	{
+	case '$':	case '&':
+	case '+':	case ',':
+	case '/':	case ':':
+	case ';':	case '=':
+	case '?':	case '@':
+	case '[':	case ']':
+	case '{':	case '}':
+	case '<':	case '>':
+	case '%':	case '"':
+	case '#':	case '|':
+	case '`':	case '\\':
+	case '^':	case '~':
+		return 0;
+	default:
+		return 1;
+	}
+}
+int CGI_int_URLEncode(const char *Source, int SourceLen, char *Dest)
 {
 	 int	outlen = 0;
 	 int	i;
 	
 	for( i = 0; i < SourceLen; i ++ )
 	{
+		if( Source[i] == ' ' )
+		{
+			if(Dest)
+				Dest[outlen] = '+';
+			outlen ++;
+		}
+		else if( !isvalidurlchar(Source[i]) )
+		{
+			if(Dest) {
+				snprintf(Dest+outlen, 3, "%%%02x", (uint8_t)Source[i]);
+			}
+			outlen += 3;
+		}
+		else
+		{
+			if(Dest)
+				Dest[outlen] = Source[i];
+			outlen ++;
+		}
+	}
+	return outlen;
+}
+
+int CGI_int_UnURLEncode(const char *Source, int SourceLen, char *Dest)
+{
+	 int	outlen = 0;
+	 int	i;
+
+	for( i = 0; i < SourceLen; i ++ )
+	{
 		char	ch;
 		
-		if( Source[i] != '%' ) {
-			ch = Source[i];
-		}
-		else {
+		if( Source[i] == '%' ) {
 			// Ignore trailing incomplete escape sequences
 			if( i + 3 > SourceLen )
 				break;
-			ch = strtol(Source + i + 1, NULL, 16);
+
+			char tmp[3] = {Source[i+1], Source[i+2], 0};
+			ch = strtol(tmp, NULL, 16);
 			i += 2;
+		}
+		else if( Source[i] == '+' ) {
+			ch = ' ';
+		}
+		else {
+			ch = Source[i];
 		}
 		if( Dest )
 			Dest[outlen] = ch;
@@ -131,8 +199,6 @@ void CGI_ParseGETData(void)
 
 void CGI_ParsePOSTData(void)
 {
-	CGI_SendHeadersOnce();	
-	
 	if( !gbCGI_IsInvokedAsCGI )	return ;
 	if( gsCGI_POSTData )	return ;
 
@@ -158,25 +224,101 @@ void CGI_ParsePOSTData(void)
 	CGI_int_ParseQueryString(query, gsCGI_POSTData, &giCGI_POSTNArgs, gaCGI_POSTArgs);
 }
 
+static inline int _ParseCookieString(const char *base, char *dataptr, int *count, tCGI_Param *dest)
+{
+	const char	*end;
+	 int	len = 0, dlen;
+	 int	idx = 0;
+	do
+	{
+		while(isspace(*base))
+			base ++;
+
+		end = strchr(base, '=');
+		if( end == NULL )	break;
+
+		len += dlen = CGI_int_UnURLEncode(base, end - base, dataptr) + 1;
+		if(dataptr)
+			dataptr[dlen-1] = '\0';
+		if( dest ) {
+			dest[idx].Name = dataptr;
+		}
+
+		if( dataptr )	dataptr += dlen;
+		base = end + 1;
+
+		end = strchr(base, ';');
+
+		if( end == NULL )
+			len += dlen = CGI_int_UnURLEncode(base, strlen(base), dataptr) + 1;
+		else
+			len += dlen = CGI_int_UnURLEncode(base, end - base, dataptr) + 1;
+		if(dataptr)
+			dataptr[dlen-1] = '\0';
+
+		if( dest ) {
+			dest[idx].Data = dataptr;
+			dest[idx].DataLen = dlen - 1;
+		}
+			
+		if( dataptr )	dataptr += dlen;
+		if( end )	base = end + 1;
+
+		idx ++;
+	} while(end);
+
+	*count = idx;	
+
+	return len;
+}
+
+void CGI_ParseCookies(void)
+{
+	if( !gbCGI_IsInvokedAsCGI )	return ;
+	if( gsCGI_CookieData )	return;
+	
+	char *e = getenv("HTTP_COOKIE");
+	if( !e )	return ;
+	
+	int len = _ParseCookieString(e, NULL, &giCGI_NCookies, NULL);
+	gsCGI_CookieData = malloc(len);
+	gaCGI_Cookies = malloc( giCGI_NCookies * sizeof(tCGI_Param) );
+	_ParseCookieString(e, gsCGI_CookieData, &giCGI_NCookies, gaCGI_Cookies);
+}
+
 void CGI_SendHeadersOnce(void)
 {
-	static int	bHeadersSent = 0;
-	
 	if( !gbCGI_IsInvokedAsCGI )
 		return ;
 	
-	if( bHeadersSent )
+	if( gbCGI_HeadersSent )
 		return ;
 
 	printf("Content-Type: text/html\n");
 	printf("\n");
 
-	bHeadersSent = 1;
+	gbCGI_HeadersSent = 1;
 }
 
 void Module_CGI_Initialise(void)
 {
 	if( getenv("REQUEST_METHOD") )
 		gbCGI_IsInvokedAsCGI = 1;
+}
+
+void CGI_AddHeader(const char *Format, ...)
+{
+	if( !gbCGI_IsInvokedAsCGI )
+		return ;
+	if( gbCGI_HeadersSent )
+		return;	// TODO: Warn
+	
+	// TODO: Determine if Content-Type is sent
+	
+	va_list args;
+	va_start(args, Format);
+	vprintf(Format, args);
+	printf("\n");
+	va_end(args);
 }
 
