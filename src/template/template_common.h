@@ -22,11 +22,13 @@ struct s_map {
 typedef struct {
 	t_map	ValueMap;
 	t_map	IteratorValues;
+	t_map	LocalValues;
 } t_obj_Template;
 
 enum e_map_entry_types
 {
 	MAPENT_UNSET,
+//	MAPENT_INTEGER,
 	MAPENT_VECTOR,	// Vector
 	MAPENT_STRING,	// String
 	MAPENT_POINTER	// Indirect value
@@ -42,7 +44,7 @@ struct s_map_entry {
 	union {
 		t_map	SubMap;
 		t_map_entry	*Ptr;
-		 int	Integer;
+//		 int	Integer;
 		char	*String;
 	};
 	char	Data[];
@@ -163,9 +165,11 @@ struct s_template
 
 extern t_map_entry	*Template_int_GetMapItem(t_map *Map, const char *Key);
 extern void	Template_int_DelMapItem(t_map *Map, const char *Key);
-extern t_map_entry	*Template_int_AddMapItem_Ptr(t_map *Map, const char *Key, t_map_entry *Ptr);
+extern t_map_entry	*Template_int_DuplicateMapItem(t_map *Map, const char *Key, int Type, void *Ptr);
 extern t_map_entry	*Template_int_AddMapItem_SubMap(t_map *Map, const char *Key);
+extern t_map_entry	*Template_int_AddMapItem_Ptr(t_map *Map, const char *Key, t_map_entry *Ptr);
 extern t_map_entry	*Template_int_AddMapItem_String(t_map *Map, const char *Key, const char *String);
+//extern t_map_entry	*TemplatE_int_AddMapItem_Integer(t_map *Map, const char *Key, int Value);
 extern void	Template_int_FreeMap(t_map *Map);
 
 extern void	Template_int_Unload(t_template *Template);

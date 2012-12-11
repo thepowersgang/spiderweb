@@ -11,6 +11,7 @@
 
 // === PROTOTYPES ===
  int	Template_int_RunSec_Arith(t_obj_Template *State, struct s_tplop_arith *Arith, void **ValuePtr);
+void	Template_int_RunSecList(t_obj_Template *State, t_tplop *First);
  int	Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr);
 void	Template_int_Output(t_obj_Template *State, t_template *Template);
 
@@ -108,6 +109,8 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 //		printf("GetValue '%s'\n", Section->Value.Name);
 		val = Template_int_GetMapItem(&State->IteratorValues, Section->Value.Name);
 		if( !val )
+			val = Template_int_GetMapItem(&State->LocalValues, Section->Value.Name);
+		if( !val )
 			val = Template_int_GetMapItem(&State->ValueMap, Section->Value.Name);
 	getvalue_retry:
 //		printf("val = %p\n", val);
@@ -141,11 +144,10 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 		}
 		else {
 			t_map_entry	*ent;
-			t_map_entry	*val = Template_int_AddMapItem_Ptr(&State->IteratorValues, Section->Iterator.ItemName, NULL);
-//			printf("Iterating into '%s'\n", Section->Iterator.ItemName);
+			t_map_entry	*val = Template_int_AddMapItem_Ptr(
+				&State->IteratorValues, Section->Iterator.ItemName, NULL);
 			for( ent = ((t_map*)ptr)->FirstEnt; ent; ent = ent->Next )
 			{
-//				printf("Item %p '%s'\n", ent, ent->Key);
 				val->Ptr = ent;
 				Template_int_RunSecList(State, Section->Iterator.PerItem);
 			}
@@ -155,7 +157,17 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 	case TPLOP_ARITH:
 		return Template_int_RunSec_Arith(State, &Section->Arith, ValuePtr);
 	case TPLOP_ASSIGN:
-		// TODO: Support {assign $var = <value>}
+		rv = Template_int_RunSec(State, Section->Assign.Value, &ptr);
+		if( rv < 0 )	return rv;
+		val = Template_int_GetMapItem(&State->LocalValues, Section->Assign.Name);
+		if( val ) {
+			// TODO: Make sure it's not the value we just calculated
+			Template_int_DelMapItem(&State->LocalValues, Section->Assign.Name);
+		}
+		val = Template_int_DuplicateMapItem(&State->LocalValues, Section->Assign.Name, rv, ptr);
+		if( !val ) {
+			// Oops?
+		}
 		return 0;
 	}
 	return 0;
@@ -171,5 +183,7 @@ void Template_int_Output(t_obj_Template *State, t_template *Template)
 	{
 		Template_int_RunSec(State, section, &unused);
 	}
+	
+	Template_int_FreeMap(&State->LocalValues);
 }
 

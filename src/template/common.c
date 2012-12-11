@@ -112,6 +112,35 @@ void Template_int_FreeMap(t_map *Map)
 		ent->Next = NULL;
 		free(ent);
 	}
+	Map->FirstEnt = NULL;
+}
+
+t_map_entry *Template_int_DuplicateMapItem(t_map *Map, const char *Key, int Type, void *Ptr)
+{
+	t_map_entry	*ent;
+	 int	len;
+	
+	if( Type == MAPENT_STRING )
+		len = strlen(Ptr) + 1;
+	else
+		len = 0;
+
+	ent = Template_int_AddMapItem(Map, Type, Key, len);
+
+	switch(Type)
+	{
+	case MAPENT_STRING:
+		ent->String = ent->Data;
+		strcpy(ent->String, Ptr);
+		break;
+//	case MAPENT_INTEGER:
+//		ent->Integer = *(int*)Ptr;
+//		break;
+	default:
+		// TODO:
+		break;
+	}
+	return ent;
 }
 
 // --- Template Parsing ---
