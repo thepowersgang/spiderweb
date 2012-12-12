@@ -26,7 +26,7 @@ char	*gsCGI_CookieData;
 tCGI_Param	*gaCGI_Cookies;
 
 // === CODE ===
-inline int isvalidurlchar(char ch)
+int isvalidurlchar(char ch)
 {
 	if( ch < 0x20 )
 		return 0;
@@ -69,7 +69,7 @@ int CGI_int_URLEncode(const char *Source, int SourceLen, char *Dest)
 		else if( !isvalidurlchar(Source[i]) )
 		{
 			if(Dest) {
-				snprintf(Dest+outlen, 3, "%%%02x", (uint8_t)Source[i]);
+				snprintf(Dest+outlen, 4, "%%%02x", (uint8_t)Source[i]);
 			}
 			outlen += 3;
 		}

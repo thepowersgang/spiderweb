@@ -10,6 +10,28 @@
 #include <string.h>
 #include <spiderweb_internal.h>
 
+@FUNCTION String RandString(Integer Bytes)
+@{
+	if( Bytes > 0x1000 ) {
+		// TODO: Throw exception?
+		@RETURN NULL;
+	}
+	tSpiderString *ret = SpiderScript_CreateString(Bytes, NULL);
+	for( int i = 0; i < Bytes; i ++ )
+	{
+		ret->Data[i] = rand();
+	}
+	@RETURN ret;
+@}
+
+@FUNCTION Integer RandInteger()
+@{
+	tSpiderInteger	ret;
+	ret = ((uint64_t)rand()) << 32;
+	ret |= rand();
+	@RETURN ret;
+@}
+
 @NAMESPACE IO
 @{
 

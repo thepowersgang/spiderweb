@@ -22,7 +22,7 @@ OBJ := $(OBJ:%=obj/%)
 DEPFILES=$(OBJ:%=%.dep)
 
 CPPFLAGS += -I .. -I .
-CFLAGS  += -Wall -Werror -g
+CFLAGS  += -Wall -Werror -g -std=gnu99
 LDFLAGS += -L .. -lspiderscript -lmysqlclient -g
 
 GENSFCNS := ../libspiderscript/tools/gen_scriptfcns.pl
