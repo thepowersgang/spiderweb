@@ -1,0 +1,74 @@
+/*
+ * SpiderWeb Scripting Suite
+ * - By John Hodge (thePowersGang)
+ * 
+ * crypto_hashes.ssf
+ * - Hashing functions (OpenSSL)
+ */
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <spiderweb_internal.h>
+#include <openssl/evp.h>
+
+@NAMESPACE Crypto
+@{
+
+@NAMESPACE Hashes
+@{
+
+tSpiderString *_hashByMD(const EVP_MD *md, const tSpiderString *Input)
+{
+	size_t	DataLen;
+	const void	*Data;
+
+	if( Input ) {
+		DataLen = Input->Length;
+		Data = Input->Data;
+	}
+	else {
+		DataLen = 0;
+		Data = NULL;
+	}
+
+	EVP_MD_CTX *mdctx = EVP_MD_CTX_create();
+	if( !mdctx ) {
+		return NULL;
+	}
+
+	tSpiderString	*ret = SpiderScript_CreateString( EVP_MD_size(md), NULL );
+
+	EVP_DigestInit_ex(mdctx, md, NULL);
+	EVP_DigestUpdate(mdctx, Data, DataLen);
+	EVP_DigestFinal_ex(mdctx, (void*)ret->Data, NULL);
+	EVP_MD_CTX_destroy(mdctx);
+	
+	return ret;
+}
+
+@FUNCTION String ByName(String Name, String Input)
+@{
+	const EVP_MD *md = EVP_get_digestbyname(Name->Data);
+	if( !md ) {
+		return -1;
+	}
+	
+	@RETURN _hashByMD(md, Input);
+@}
+
+@FUNCTION String MD5(String Input)
+@{
+	@RETURN _hashByMD(EVP_md5(), Input);
+@}
+
+@FUNCTION String SHA256(String Input)
+@{
+	@RETURN _hashByMD(EVP_sha256(), Input);
+@}
+
+@}
+
+@}
+
+// vim: ft=c
+
