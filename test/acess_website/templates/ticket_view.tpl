@@ -46,7 +46,7 @@
 </div>
 
 {if $UserName != ""}
-<form method="POST" action="ticket_edit.ss?a=update">
+<form method="POST" action="ticket_edit.ss?id={$lTicketID}&amp;a=update">
  <div class="ticket_postcomment">
   Post comment: <br />
   <textarea name="comment_text" rows="5" cols="30"></textarea>
@@ -66,15 +66,26 @@
   <input type="radio" name="action" value="needswork" />
   Needs work
   <br />
-{else}
-  <input type="radio" name="action" value="fixed" />
-  Fixed
+{else} {* new/accepted/needswork *}
+  <input type="radio" name="action" value="resolve" />
+  Resolve as
+  <select name="resolution">
+   <option value="fixed">fixed</option>
+   <option value="wontfix">wontfix</option>
+   <option value="cnr">CNR</option>
+   <option value="invalid">not a bug</option>
+   <option value="duplicate">duplicate</option>
+  </select>
+  (move to reviewing)
   <br />
-  <input type="radio" name="action" value="invalid" />
-  Invalid
+ {if $lTicket.status == "new"}
+  <input type="radio" name="action" value="accept" />
+  Accept ticket
   <br />
+ {endif}
 {endif}
  </div>
+ <input type="submit" name="subtype" value="Submit changes" />
 </form>
 {endif}
 

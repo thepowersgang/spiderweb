@@ -1,0 +1,27 @@
+.ticket_comments {
+	margin-top: 20px;
+	border: 1px #000 solid;
+	padding: 2px;
+}
+
+.ticket_comment {
+	border-top: 3px solid #CCC;
+}
+.ticket_comment:first {
+	border-top: none;
+}
+
+.ticket_postcomment {
+	margin-top: 30px;
+	border: 1px #000 solid
+}
+
+.ticket_edit:before {
+	content: "Update Ticket";
+	display: block;
+	font-weight: bold;
+}
+.ticket_edit {
+	margin-top: 5px;
+	border: 1px solid #000;
+}

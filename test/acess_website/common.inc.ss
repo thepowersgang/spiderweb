@@ -3,8 +3,6 @@
 include "database.inc.ss";
 SpiderWeb.Template $tpl();
 
-CGI.SetCookie("testcookie", "hello", 3600);
-
 String $gSessionHash = CGI.GetCookie("SWSESSIONID");
 CGI.Session $gSession($gSessionHash, "acess2sw");
 //if($gSessionHash != $gSession->Hash) {

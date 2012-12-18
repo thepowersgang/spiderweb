@@ -54,7 +54,7 @@ if( CGI.ReadPOST("username") !== null )
 	{
 		$gUserID = (Integer)$row[0];
 		$gUserName = $lUsername;
-		String $token = "TESTTOKEN";
+		String $token = RandString(12);
 		String $q = "UPDATE users SET `token`='"+$dbconn->Escape($token)+"',`token_age`=NOW() WHERE uid="+$gUserID+" LIMIT 1";
 		if( $dbconn->Query($q) === null ) {
 			$tpl->Assign("SQLQuery", $q);

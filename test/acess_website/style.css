@@ -53,6 +53,7 @@ div#menubar {
  width: 100%;
  padding-top: 2px;
  padding-bottom: 2px;
+ font-size: small;
  -moz-border-radius:5px;-webkit-border-radius:5px;border-radius:5px;;
 }
 div#menubar>div {

@@ -32,6 +32,7 @@ if( $row === null ) {
 
 $tpl->Assign("PageTitle", "View Ticket");
 
+$tpl->Assign("lTicketID", $lTicketID);
 Lang.StringMap	$lTicket();
 $lTicket->set("title",   $row[0]);
 $lTicket->set("desc",    formatText($row[1]));
