@@ -483,6 +483,37 @@ t_tplop **Template_int_ParseStatement(t_parserstate *State, const char *Filename
 
 			return &cond->True;
 		}
+		else if( CMPTOK("elseif") ) {
+			if(State->BStackPos == 0) {
+				fprintf(stderr, "{else} with no matching {if}\n");
+				return NULL;
+			}
+			t_tplop_cond	*pcond = State->BStack[State->BStackPos-1].Op;
+			if(pcond->Type != TPLOP_CONDITIONAL) {
+				fprintf(stderr, "{else} on non {if} block\n");
+				return NULL;
+			}
+			
+			if( pcond->False || State->CurList == &pcond->False ) {
+				fprintf(stderr, "{elseif} after an {else} block\n");
+				return NULL;
+			}
+			
+			t_tplop_cond *cond = malloc( sizeof(*cond) );
+			pcond->False = (void*)cond;
+			cond->Type = TPLOP_CONDITIONAL;
+			cond->Next = NULL;
+			
+			cond->Condition = Template_int_ParseExpr(Parser);
+			cond->True = NULL;
+			cond->False = NULL;
+			
+			// Replace current op with new if
+			State->BStack[State->BStackPos-1].Op = cond;
+			// - Don't need to touch .List
+			
+			return &cond->True;
+		}
 		else if( CMPTOK("else") ) {
 			if(State->BStackPos == 0) {
 				fprintf(stderr, "{else} with no matching {if}\n");
