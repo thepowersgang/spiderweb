@@ -167,6 +167,11 @@ void Template_int_FreeSec(t_tplop *Section)
 	
 	case TPLOP_VALUEOUT:
 		Template_int_FreeSec(Section->Output.Value);
+		while( Section->Output.Filters ) {
+			void *next = Section->Output.Filters->Next;
+			free(Section->Output.Filters);
+			Section->Output.Filters = next;
+		}
 		break;
 	
 	case TPLOP_CONDITIONAL:

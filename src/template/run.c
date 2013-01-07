@@ -97,9 +97,41 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 		fwrite(Section->Constant.Data, 1, Section->Constant.Length, stdout);
 		return 0;
 	case TPLOP_VALUEOUT:
-		// TODO: Filters?
 		rv = Template_int_RunSec(State, Section->Output.Value, &ptr);
-		if( rv == MAPENT_STRING )	fputs(ptr, stdout);
+		if( rv == MAPENT_STRING )
+		{
+			// Run filters on string
+			// TODO: Break out into function?
+			t_tplop_output_filter *f = Section->Output.Filters;
+			if( f )
+			{
+				void *str;
+				
+				// Create SpiderString
+				str = Template_int_CreateFilterString(State, ptr);
+				
+				// Process
+				while( f )
+				{
+					Template_int_FilterString(State, &str, f->Name);
+					f = f->Next;
+				}
+				
+				const char *outstr;
+				size_t outlen;
+				// Get pointer/length of SpiderString
+				Template_int_GetFilterString(State, str, &outstr, &outlen);
+				fwrite(outstr, outlen, 1, stdout);
+				
+				// Free SpiderString
+				Template_int_FreeFilterString(State, str);
+			}
+			else
+			{
+				// No filters, simple :)
+				fputs(ptr, stdout);
+			}
+		}
 		return 0;
 	
 	case TPLOP_CONSTANT:

@@ -205,7 +205,36 @@ t_tplop *Template_int_NewOutput(t_tplop *Value)
 	out->Type = TPLOP_VALUEOUT;
 	out->Next = NULL;
 	out->Value = Value;
+	out->Filters = NULL;
 	return (t_tplop*)out;
+}
+
+int Template_int_AddModifier(t_tplop *Op, const char *ModName, size_t ModNameLen /* TODO: Arguments */)
+{
+	if( !Op || Op->Type != TPLOP_VALUEOUT )
+		return -1;
+	
+	t_tplop_output	*out = (void*)Op;
+	t_tplop_output_filter	*prev = out->Filters;
+
+	// Find end of list
+	while(prev && prev->Next)
+		prev = prev->Next;
+	
+	// Create new filter reference
+	t_tplop_output_filter	*new;
+	new = malloc( sizeof(t_tplop_output_filter) + ModNameLen + 1 );
+	new->Next = NULL;
+	memcpy(new->Name, ModName, ModNameLen);
+	new->Name[ModNameLen] = '\0';
+	
+	// Append
+	if(prev)
+		prev->Next = new;
+	else
+		out->Filters = new;
+
+	return 0;
 }
 
 t_tplop *Template_int_ParseExpr(tParser *Parser)

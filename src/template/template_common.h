@@ -20,6 +20,7 @@ struct s_map {
 };
 
 typedef struct {
+	struct sSpiderScript	*Script;
 	t_map	ValueMap;
 	t_map	IteratorValues;
 	t_map	LocalValues;
@@ -85,6 +86,7 @@ typedef union u_tplop  	t_tplop;
 typedef struct s_tplop_const	t_tplop_const;
 typedef struct s_tplop_value	t_tplop_value;
 typedef struct s_tplop_output	t_tplop_output;
+typedef struct s_tplop_output_filter	t_tplop_output_filter;
 typedef struct s_tplop_assign	t_tplop_assign;
 typedef struct s_tplop_iter	t_tplop_iter;
 typedef struct s_tplop_cond	t_tplop_cond;
@@ -105,10 +107,18 @@ struct s_tplop_value
 	char	Name[];
 };
 
+struct s_tplop_output_filter
+{
+	t_tplop_output_filter *Next;
+	// Arguments?
+	char	Name[];
+};
+
 struct s_tplop_output
 {
 	S_TPLSEC_HDR
 	t_tplop	*Value;
+	t_tplop_output_filter	*Filters;
 };
 
 struct s_tplop_assign
@@ -175,6 +185,12 @@ extern void	Template_int_FreeMap(t_map *Map);
 extern void	Template_int_Unload(t_template *Template);
 extern t_template	*Template_int_Load(const char *Filename);
 extern void	Template_int_Output(t_obj_Template *State, t_template *Template);
+
+
+extern void	*Template_int_CreateFilterString(t_obj_Template *State, const char *InputString);
+extern void	Template_int_FreeFilterString(t_obj_Template *State, void *String);
+extern int	Template_int_FilterString(t_obj_Template *State, void **StringPtr, const char *FilterName);
+extern void	Template_int_GetFilterString(t_obj_Template *State, void *String, const char **DataPtr, size_t *LenPtr);
 
 #endif
 

@@ -25,6 +25,7 @@
 	if(!ret)	@RETURN NULL;	// TODO: Exception
 	
 	info = ret->OpaqueData;
+	info->Script = Script;
 	info->ValueMap.FirstEnt = NULL;
 	info->IteratorValues.FirstEnt = NULL;
 	

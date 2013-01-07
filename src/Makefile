@@ -5,7 +5,7 @@
 USE_OPENSSL?=yes# yes/no
 
 OBJ := main.o
-OBJ += template/load.o template/run.o template/common.o
+OBJ += template/load.o template/run.o template/common.o template/filter.o
 OBJ += module_cgi.o
 BIN = ../sw
 
