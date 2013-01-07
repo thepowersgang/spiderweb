@@ -22,14 +22,7 @@ if( $gUserName === null )
 			+" `username`='"+$dbconn->Escape($gUserName)+"'"
 			+" AND `token`='"+$dbconn->Escape($authtoken)+"'"
 			+" AND `token_age` > NOW() - INTERVAL 1 DAY";
-		SpiderWeb.MySQL.Result $r = $dbconn->Query($q);
-		if( $r === null ) {
-			$tpl->Assign("SQLQuery", $q);
-			$tpl->Assign("SQLError", $dbconn->LastErrorString());
-			$tpl->Display("templates/sqlerror.tpl");
-			return 0;
-		}
-		String[] $row = $r->GetNextRow();
+		String[] $row = DB_GetSingleRow($tpl, $dbconn, $q);
 		if($row !== null)
 		{
 			$gUserID = (Integer)$row[0];

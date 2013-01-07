@@ -34,8 +34,8 @@
 {foreach $lComments as $comment}
 <div class="ticket_comment">
 <span class="time">{$comment.time}</span>
-<span class="user">{$comment.user|tickets_userlink}</span>
-<span class="number">{$comment.num}</span>
+<span class="user">Posted by {$comment.user|tickets_userlink}</span>
+<span class="number">Comment #{$comment.num}</span>
 <div class="text">
 {$comment.text}
 </div>
