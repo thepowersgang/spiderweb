@@ -17,7 +17,7 @@ String $query = "SELECT ticket_title,ticket_desc,ticket_type,ticket_project,tick
 		+",ticket_status,ticket_opened"
 		+",ticket_owner,ticket_filer"
 		+" FROM tickets WHERE ticket_id="+$lTicketID+" LIMIT 1";
-String[] $row = DB_GetSingleRow($tpl, $dbconn, $query);
+String[] $row = DB_GetSingleRow($query);
 if( $row === null ) {
 	$tpl->Assign("ErrorMessage", "Invalid ticket ID");
 	$tpl->Display("templates/error.tpl");
@@ -47,9 +47,7 @@ $lTicket->set("filer",   Ticket_GetUser($dbconn, (Integer)$row[8]));
 $tpl->Assign("lTicket", $lTicket);
 
 // TODO: Comments
-SpiderWeb.MySQL.Result $res = DB_Query($tpl, $dbconn,
-	"SELECT cmt_time,cmt_user,cmt_text FROM ticket_comments WHERE cmt_ticket="+$lTicketID
-	);
+SpiderWeb.MySQL.Result $res = DB_Query("SELECT cmt_time,cmt_user,cmt_text FROM ticket_comments WHERE cmt_ticket="+$lTicketID);
 Lang.StringMap[] $lComments($res->ResultCount());
 //String[] $row;
 Integer $i = 0;

@@ -1,7 +1,7 @@
 #<?php
 
 include "database.inc.ss";
-SpiderWeb.Template $tpl();
+global SpiderWeb.Template $tpl();
 
 String $gSessionHash = CGI.GetCookie("SWSESSIONID");
 CGI.Session $gSession($gSessionHash, "acess2sw");
@@ -22,7 +22,7 @@ if( $gUserName === null )
 			+" `username`='"+$dbconn->Escape($gUserName)+"'"
 			+" AND `token`='"+$dbconn->Escape($authtoken)+"'"
 			+" AND `token_age` > NOW() - INTERVAL 1 DAY";
-		String[] $row = DB_GetSingleRow($tpl, $dbconn, $q);
+		String[] $row = DB_GetSingleRow($q);
 		if($row !== null)
 		{
 			$gUserID = (Integer)$row[0];
