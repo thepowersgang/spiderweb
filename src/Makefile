@@ -3,7 +3,7 @@
 #
 
 OBJ := main.o
-OBJ += template/load.o template/run.o template/common.o
+OBJ += template/load.o template/run.o template/common.o template/filter.o
 OBJ += module_cgi.o
 BIN = ../sw
 
@@ -12,7 +12,7 @@ USE_MYSQL ?= yes
 EXPORT_FILES := misc.ssf template/object.ssf fileio.ssf cgi.ssf
 
 CPPFLAGS += -I .. -I .
-CFLAGS  += -Wall -Werror -g
+CFLAGS  += -Wall -Werror -g -std=gnu99
 LDFLAGS += -L .. -lspiderscript -g
 
 ifeq ($(USE_MYSQL),yes)
