@@ -1,0 +1,5 @@
+.*
+sw
+*.gen.c
+*.gen.h
+*.csw
