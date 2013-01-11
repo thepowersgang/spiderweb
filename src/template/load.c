@@ -663,7 +663,7 @@ t_tplop **Template_int_ParseStatement(t_parserstate *State, const char *Filename
 			{
 				assert( Template_int_GetToken(Parser) == TOK_IDENT );
 				// Apply modifiers
-//				Template_int_AddModifier(op, Parser->CurState.TokenStr, Parser->CurState.TokenLen);
+				Template_int_AddModifier(op, Parser->CurState.TokenStr, Parser->CurState.TokenLen);
 			}
 			Template_int_PutBack(Parser);
 			// Output stuff

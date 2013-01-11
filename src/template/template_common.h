@@ -12,6 +12,7 @@
 
 typedef struct s_map_entry	t_map_entry;
 typedef struct s_map	t_map;
+typedef struct s_filter	t_filter;
 
 struct s_map {
 	t_map_entry	*FirstEnt;
@@ -19,11 +20,20 @@ struct s_map {
 	// TODO: Hash table?
 };
 
+struct s_filter {
+	struct s_filter	*Next;
+	char	*Name;
+	char	*BoundFcn;
+	void	*FcnPtr;
+	// ...
+};
+
 typedef struct {
 	struct sSpiderScript	*Script;
 	t_map	ValueMap;
 	t_map	IteratorValues;
 	t_map	LocalValues;
+	t_filter	*Filters;
 } t_obj_Template;
 
 enum e_map_entry_types

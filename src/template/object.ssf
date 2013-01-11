@@ -98,6 +98,62 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, int
 	return 0;
 }
 
+@FUNCTION void BindFilter(String Name, String Function)
+@{
+	t_obj_Template	*info = this->OpaqueData;
+	// Sanity check arguments
+	if( !Name || !Function ) {
+		// TODO: Argument Exception
+		return -1;
+	}
+	
+	if( strlen(Name->Data) != Name->Length ) {
+		return SpiderScript_ThrowException(
+			Script, SS_EXCEPTION_GENERIC,
+			"Template->BindFilter - Name contains null"
+			);
+	}
+	if( strlen(Function->Data) != Function->Length ) {
+		return SpiderScript_ThrowException(
+			Script, SS_EXCEPTION_GENERIC,
+			"Template->BindFilter - Function name contains null"
+			);
+	}
+	
+	// Look up the function, check it's argument types are correct
+	// - String _fcn_(String )
+	// - TODO: Needs something like 'SpiderScript_CheckFunction(Script, Fcn, ArgTypes, &Ident)'
+	
+	// Add to list (with function's pointer)
+	t_filter *f;
+	t_filter **prev_next_ptr = &info->Filters;
+	for( f = info->Filters; f; f = f->Next )
+	{
+		 int	cmp = strcmp(f->Name, Name->Data);
+		if( cmp == 0 ) {
+			return SpiderScript_ThrowException(
+				Script, SS_EXCEPTION_GENERIC,
+				"Template->BindFilter - Redefinition of filter %s", f->Name
+				);
+		}
+		// Sorted list
+		if( cmp > 0 )
+			break;
+		prev_next_ptr = &f->Next;
+	}
+	
+	f = malloc(sizeof(*f) + Name->Length+1 + Function->Length+1);
+	f->Next = NULL;
+	f->Name = (char*)(f+1);
+	f->FcnPtr = NULL;
+	f->BoundFcn = f->Name + Name->Length+1;
+	strcpy(f->Name, Name->Data);
+	strcpy(f->BoundFcn, Function->Data);
+	
+	f->Next = *prev_next_ptr;
+	*prev_next_ptr = f;
+@}
+
 @FUNCTION void Assign(String Key, * Value)
 @{
 	t_obj_Template	*info = this->OpaqueData;

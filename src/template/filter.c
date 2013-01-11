@@ -18,17 +18,29 @@ void Template_int_FreeFilterString(t_obj_Template *State, void *String)
 
 int Template_int_FilterString(t_obj_Template *State, void **StringPtr, const char *FilterName)
 {
+	t_filter	*filter;
+	
+	// Locate filter binding
+	for( filter = State->Filters; filter; filter = filter->Next )
+	{
+		if( strcmp(filter->Name, FilterName) == 0 )
+			break ;
+	}
+	if( !filter )
+		return -1;
+	
+	// Execute
 	tSpiderString	*retval;
 	 int	argtypes[] = {SS_DATATYPE_STRING};
 	const void	*args[] = {*StringPtr};
-	 int	rv = SpiderScript_ExecuteFunction(State->Script, FilterName, &retval, 1, argtypes, args, NULL);
-	
+	 int	rv = SpiderScript_ExecuteFunction(State->Script, filter->BoundFcn, &retval, 1, argtypes, args, &filter->FcnPtr);
 	if( rv != SS_DATATYPE_STRING )
 	{
 		// uhh...
 		return -1;
 	}
 
+	// Clean up
 	SpiderScript_DereferenceString(*StringPtr);
 	*StringPtr = retval;
 	
