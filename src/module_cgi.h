@@ -23,5 +23,7 @@ extern void	CGI_ParseCookies(void);
 extern void	CGI_AddHeader(const char *Format, ...);
 extern void	CGI_SendHeadersOnce(void);
 
+extern int	CGI_SetHeader(const char *Name, const char *Value);
+
 #endif
 

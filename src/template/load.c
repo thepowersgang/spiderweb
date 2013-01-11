@@ -730,14 +730,14 @@ t_template *Template_int_Load(const char *Filename)
 	lastfp = NULL;
 	for( ;; )
 	{
-		const char	*thisfile;
+		//const char	*thisfile;
 		if( state.FStackPos ) {
 			fp = state.FStack[ state.FStackPos - 1 ].FP;
-			thisfile = state.FStack[ state.FStackPos - 1 ].Filename;
+		//	thisfile = state.FStack[ state.FStackPos - 1 ].Filename;
 		}
 		else {
 			fp = rootfp;
-			thisfile = Filename;
+		//	thisfile = Filename;
 		}
 		if( fp != lastfp && lastfp ) {
 			fseek(lastfp, -ofs, SEEK_CUR);

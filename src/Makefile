@@ -2,28 +2,29 @@
 # SpiderWeb - Web targeted SpiderScript variant
 #
 
-USE_OPENSSL?=yes# yes/no
-
 OBJ := main.o
-OBJ += template/load.o template/run.o template/common.o template/filter.o
+OBJ += template/load.o template/run.o template/common.o
 OBJ += module_cgi.o
 BIN = ../sw
 
-EXPORT_FILES := misc.ssf mysql.ssf template/object.ssf fileio.ssf cgi.ssf
-ifeq ($(USE_OPENSSL),yes)
-EXPORT_FILES += crypto_hashes.ssf
-LDFLAGS += -lssl
-endif
-EXPORT_FILES := $(EXPORT_FILES:%.gen.o=%.ssf)
+USE_MYSQL ?= yes
 
+EXPORT_FILES := misc.ssf template/object.ssf fileio.ssf cgi.ssf
+
+CPPFLAGS += -I .. -I .
+CFLAGS  += -Wall -Werror -g
+LDFLAGS += -L .. -lspiderscript -g
+
+ifeq ($(USE_MYSQL),yes)
+  EXPORT_FILES += mysql.ssf
+  LDFLAGS += -lmysqlclient
+endif
+
+EXPORT_FILES := $(EXPORT_FILES:%.gen.o=%.ssf)
 OBJ += $(patsubst %.c,%.o,.exports/_index.c $(EXPORT_FILES:%.ssf=.exports/%.c))
 OBJ := $(addprefix $(OBJDIR),$(OBJ))
 OBJ := $(OBJ:%=obj/%)
 DEPFILES=$(OBJ:%=%.dep)
-
-CPPFLAGS += -I .. -I .
-CFLAGS  += -Wall -Werror -g -std=gnu99
-LDFLAGS += -L .. -lspiderscript -lmysqlclient -g
 
 GENSFCNS := ../libspiderscript/tools/gen_scriptfcns.pl
 
@@ -44,7 +45,7 @@ types.gen.h: $(EXPORT_FILES) $(GENSFCNS)
 	@mkdir -p $(dir $@)
 	perl $(GENSFCNS) --mkhdr $@ $(EXPORT_FILES)
 
-.exports/_index.c: $(EXPORT_FILES) $(GENSFCNS)
+.exports/_index.c: $(EXPORT_FILES) types.gen.h $(GENSFCNS)
 	@mkdir -p $(dir $@)
 	perl $(GENSFCNS) -H types.gen.h --mkidx $@ $(EXPORT_FILES)
 
