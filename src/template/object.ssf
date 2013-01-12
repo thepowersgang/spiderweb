@@ -37,6 +37,11 @@
 	t_obj_Template	*info = this->OpaqueData;
 	
 	Template_int_FreeMap( &info->ValueMap );
+	for( t_filter *f = info->Filters, *n; f; f = n )
+	{
+		n = f->Next;
+		free(f);
+	}
 @}
 
 int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, int ValueType, const void *ValuePtr)
