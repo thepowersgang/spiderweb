@@ -28,7 +28,6 @@ String makeuserlink(String $uid)
 {
 	global SpiderWeb.MySQL $dbconn;
 	return Ticket_GetUser($dbconn, (Integer)$uid);
-//	return "<a href='users.ss?id="+$uid+"'>User #"+$uid+"</a>";
 }
 $tpl->BindFilter("tickets_userlink", "makeuserlink");
 
@@ -43,8 +42,6 @@ $lTicket->set("project", $row[3]);
 // TODO: Tags
 $lTicket->set("status",  $row[5]);
 $lTicket->set("opened",  $row[6]);
-//$lTicket->set("owner",   Ticket_GetUser($dbconn, (Integer)$row[7]));
-//$lTicket->set("filer",   Ticket_GetUser($dbconn, (Integer)$row[8]));
 $lTicket->set("owner",   $row[7]);
 $lTicket->set("filer",   $row[8]);
 $tpl->Assign("lTicket", $lTicket);
@@ -58,7 +55,6 @@ while( ($row = $res->GetNextRow()) !== null )
 {
 	Lang.StringMap $comment();
 	$comment->set("time", $row[0]);
-	//$comment->set("user", Ticket_GetUser($dbconn, (Integer)$row[1]));
 	$comment->set("user", $row[1]);
 	$comment->set("num", (String)$i);
 	$comment->set("text", $row[2]);

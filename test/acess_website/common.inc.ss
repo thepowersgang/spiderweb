@@ -29,7 +29,7 @@ if( $gUserName === null )
 		}
 		else
 		{
-			IO.Print("Bad cookie username/token "+$gUserName+"/"+$authtoken);
+		//	IO.Print("Bad cookie username/token "+$gUserName+"/"+$authtoken);
 		}
 	}
 }
@@ -39,6 +39,7 @@ if( $gUserID == 0 || $gUserName === null )
 
 $tpl->Assign("UserName", $gUserName);
 
+$tpl->BindFilter("formatText", "formatText");
 
 String formatText(String $Input)
 {

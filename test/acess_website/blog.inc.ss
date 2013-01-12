@@ -30,7 +30,7 @@ Lang.StringMap[] Blog_GetLatest(SpiderWeb.MySQL $dbconn, Integer $page, Integer 
 		$posts[$i]->set("username", $row[2]);
 		$posts[$i]->set("posted",   $row[3]);
 		$posts[$i]->set("name",     $row[4]);
-		$posts[$i]->set("formatted_text", $row[5]);
+		$posts[$i]->set("text",     $row[5]);
 	}
 	return $posts;
 }
