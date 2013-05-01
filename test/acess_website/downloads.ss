@@ -85,6 +85,7 @@ if( $lRequestedRelease === null )
 			$nReleases ++;
 		}
 	}
+	delete $dp;
 
 	// Sort releases
 	$releases = Lang.SortStrings($releases);

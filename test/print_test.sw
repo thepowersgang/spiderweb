@@ -50,9 +50,7 @@ IO.Print("\n");
 }
 
 // Test objects and File IO
-IO.File $fp;	// TODO: Replace "Object" with a class definition
-// Maybe: "Object(IO.File) $fp"
-$fp = new IO.File("1.txt", "r");
+IO.File $fp("1.txt", "r");
 if( $fp )
 {
 	IO.Print("First 100 bytes of '1.txt':\n");
@@ -72,8 +70,7 @@ $fp->Write("Hello There\n");
 delete $fp;
 IO.Print(" Done\n");
 
-Integer $i;
-for<outer>( $i = 0; $i < 10; $i ++ )
+for<outer>( Integer $i = 0; $i < 10; $i ++ )
 {
 	IO.Print("\n$i = " + $i + ", ");
 	// Test break and continue in loops

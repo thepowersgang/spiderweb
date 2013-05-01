@@ -48,9 +48,13 @@ String formatText(String $Input)
 #	$output = Lang.Strings.RegexReplace($output, "^.*^", "<sup>$1</sup>");
 #	$output = Lang.Strings.RegexReplace($output, "_.*_", "<sub>$1</sub>");
 	$output = Lang.Strings.Replace($output, "\r\n", "\n");
+	$output = Lang.Strings.Replace($output, "&", "&amp;");
+	$output = Lang.Strings.Replace($output, "<", "&lt;");
+	$output = Lang.Strings.Replace($output, ">", "&gt;");
 	$output = Lang.Strings.Replace($output, "{{{", "<span style='font-size:small;font-family:mono'>");
 	$output = Lang.Strings.Replace($output, "}}}", "</span>");
 	$output = Lang.Strings.Replace($output, "\n", "<br/>\n");
+	
 	return $output;
 }
 

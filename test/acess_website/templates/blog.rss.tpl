@@ -19,7 +19,7 @@
    <pubDate>{$Item.posted}</pubDate>
    <guid>http://www.mutabah.net/acess2/blog.php/{$Item.posted}/{$Item.pid}</guid>
    <dc:creator>{$Item.username}</dc:creator>
-   <description>{$Item.formatted_text}</description>
+   <description>{$Item.text|formatText}</description>
   </item>
 {endforeach}
  </channel>
