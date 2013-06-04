@@ -31,10 +31,12 @@ int Template_int_FilterString(t_obj_Template *State, void **StringPtr, const cha
 	
 	// Execute
 	tSpiderString	*retval;
-	 int	argtypes[] = {SS_DATATYPE_STRING};
+	tSpiderTypeRef	rettype;
+	tSpiderTypeRef	argtypes[] = {{&gSpiderScript_StringType,0}};
 	const void	*args[] = {*StringPtr};
-	 int	rv = SpiderScript_ExecuteFunction(State->Script, filter->BoundFcn, &retval, 1, argtypes, args, &filter->FcnPtr);
-	if( rv != SS_DATATYPE_STRING )
+	 int	rv = SpiderScript_ExecuteFunction(State->Script, filter->BoundFcn,
+		&rettype, &retval, 1, argtypes, args, &filter->FcnPtr);
+	if( rv != 0 || !SS_ISCORETYPE(rettype, SS_DATATYPE_STRING) )
 	{
 		// uhh...
 		return -1;

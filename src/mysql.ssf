@@ -108,7 +108,7 @@ int gi_mysql_object_count = 0;
 		}
 		
 		tSpiderObject *ret;
-		rv = SpiderScript_CreateObject_Type(Script, @TYPECODE(SpiderWeb.MySQL.Result),
+		rv = SpiderScript_CreateObject_Type(Script, @TYPECODE(SpiderWeb.MySQL.Result).Def,
 			&ret, 0, NULL, NULL, NULL);
 		if( rv < 0 ) {
 			// Can't construct?
