@@ -101,10 +101,11 @@ int main(int argc, char *argv[], char **envp)
 	}
 
 	// Execute
+	tSpiderTypeRef	rettype;
 	tSpiderInteger	ret;
-	 int	argt[] = {};
+	tSpiderTypeRef	argt[] = {};
 	const void	*args[] = {};
-	rv = SpiderScript_ExecuteFunction(script, "", &ret, 0, argt, args, NULL);
+	rv = SpiderScript_ExecuteFunction(script, "", &rettype, &ret, 0, argt, args, NULL);
 	CGI_SendHeadersOnce();
 	if( rv < 0 )
 	{
@@ -121,6 +122,7 @@ int main(int argc, char *argv[], char **envp)
 		}
 		SpiderScript_ClearException(script);
 	}
+	// TODO: Check if return type is sane
 	
 	SpiderScript_Free(script);
 	if( gbCacheCompiled )

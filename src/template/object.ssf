@@ -44,7 +44,7 @@
 	}
 @}
 
-int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, int ValueType, const void *ValuePtr)
+int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSpiderTypeRef ValueType, const void *ValuePtr)
 {
 	if( !ValuePtr )
 		return 0;
@@ -52,7 +52,8 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, int
 	if( SS_GETARRAYDEPTH(ValueType) )
 	{
 		 int	i;
-		 int	type = SS_DOWNARRAY(ValueType);
+		tSpiderTypeRef	type = ValueType;
+		type.ArrayDepth --;
 		const tSpiderArray	*array = ValuePtr;
 		t_map_entry *submap = Template_int_AddMapItem_SubMap( Map, Key );
 		
@@ -63,29 +64,32 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, int
 			Template_int_AddItem(Script, &submap->SubMap, key, type, SpiderScript_GetArrayPtr(array, i));
 		}
 	}
-	else if( ValueType == @TYPECODE(Lang.StringMap) )
+	else if( SS_TYPESEQUAL(ValueType, @TYPECODE(Lang.StringMap)) )
 	{
 		tSpiderArray	*keys;
 		tSpiderString	*val;
+		tSpiderTypeRef	rettype;
 		 int	rv, i;
 	
 		// Call the ->keys() method (with the `this` parameter)	
-		rv = SpiderScript_ExecuteMethod(Script, "keys", &keys, 1, &ValueType, &ValuePtr, NULL);
-		if(rv != SS_MAKEARRAY(SS_DATATYPE_STRING))
+		rv = SpiderScript_ExecuteMethod(Script, "keys", &rettype, &keys, 1, &ValueType, &ValuePtr, NULL);
+		if(rv != 0)
 			return -1;	// Oops?
+		if( !SS_TYPESEQUAL(rettype, @TYPECODE(String[])) )
+			return -1;
 		
 		t_map_entry *submap = Template_int_AddMapItem_SubMap( Map, Key );
 		
 		for( i = 0; i < keys->Length; i ++ )
 		{
-			 int	types[] = {ValueType, SS_DATATYPE_STRING};
+			tSpiderTypeRef	types[] = {ValueType, @TYPECODE(String)};
 			const void	*args[] = {ValuePtr, keys->Strings[i]};
 			if( !keys->Strings[i] )
 				continue ;
-			rv = SpiderScript_ExecuteMethod(Script, "get", &val, 2, types, args, NULL);
-			if(rv != SS_DATATYPE_STRING)
+			rv = SpiderScript_ExecuteMethod(Script, "get", &rettype, &val, 2, types, args, NULL);
+			if(rv != 0 || !SS_TYPESEQUAL(rettype, @TYPECODE(String)) )
 				break;
-			Template_int_AddItem(Script, &submap->SubMap, keys->Strings[i]->Data, SS_DATATYPE_STRING, val);
+			Template_int_AddItem(Script, &submap->SubMap, keys->Strings[i]->Data, rettype, val);
 			SpiderScript_DereferenceString(val);
 		}
 		SpiderScript_DereferenceArray(keys);
