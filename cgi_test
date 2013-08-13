@@ -1,0 +1,2 @@
+#!/bin/bash
+REQUEST_METHOD=GET QUERY_STRING="$2" $3 `dirname $0`/sw $1
