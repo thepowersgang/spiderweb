@@ -7,8 +7,8 @@ $tpl->Assign("PageTitle", "Issue List");
 
 String $query = "SELECT ticket_id,ticket_title,ticket_filer,ticket_type,ticket_status,ticket_opened,ticket_owner FROM tickets"
 	+" WHERE 1=1";
-String $lProject = CGI.ReadGET("prj");
-String $lType = CGI.ReadGET("type");
+String $lProject = CGI.GetPathInfo(0) ?: CGI.ReadGET("prj") ?: null;
+String $lType = CGI.GetPathInfo(1) ?: CGI.ReadGET("type") ?: null;
 if( $lProject )
 	$query += " AND ticket_project='" + $dbconn->Escape(CGI.ReadGET("prj")) + "'";
 if( $lType )

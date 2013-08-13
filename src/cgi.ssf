@@ -91,6 +91,28 @@ const char	*gsCGI_SessionDir = "/tmp/spiderweb/sessions";
 	CGI_AddHeader("Set-Cookie: %.*s=%.*s; expires=%s; path=%s", nlen, name, vlen, value, timeout, "/");
 @}
 
+@FUNCTION String GetPathInfo(Integer Index)
+@{
+	if( Index < 0 )
+		@RETURN NULL;
+	char *pathinfo = getenv("PATH_INFO");
+	if( pathinfo )
+	{
+		while( Index && pathinfo )
+		{
+			pathinfo = strchr(pathinfo+1, '/');
+			Index --;
+		}
+		if( Index == 0 && pathinfo ) {
+			pathinfo ++;
+			char *end = strchr(pathinfo, '/');
+			size_t len = (end ? end - pathinfo : strlen(pathinfo));
+			@RETURN SpiderScript_CreateString(len, pathinfo);
+		}
+	}
+	@RETURN NULL;
+@}
+
 @FUNCTION String ReadGET(String Name)
 @{
 	 int	 i;
