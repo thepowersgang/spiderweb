@@ -1,6 +1,11 @@
 #!/bin/sw
 #<?php	// Hijack PHP's syntax hilighting
 
+#
+# This file is mostly to test the language features of SpiderScript
+# - And some of the SpiderWeb bindings
+#
+
 // Test function 1
 void printl(String $string)
 {
@@ -85,6 +90,39 @@ for<outer>( Integer $i = 0; $i < 10; $i ++ )
 	}
 }
 IO.Print("\n");
+
+$val = 1234;
+switch($val)
+{
+case 1233:
+	IO.Print("un deux trois trois\n");
+	break;
+case 1234:
+	IO.Print("un deux "+"trois 4\n");
+case 1235:
+	IO.Print("one two three five\n");
+	break;
+}
+switch($val)
+{
+case 0:
+	IO.Print("Oops.\n");
+	break;
+default:
+	IO.Print("I care not\n");
+}
+
+// Test string optimisation
+// - Literal grouping
+IO.Print("Hello" + " " + "World");
+
+// Test integer and float optimsations
+$val = 1234 + 4321 / 5 - 100 * 10;
+Real $fval = 1234.0 + 4321.0 / 5.0 - 100.0 * 10.0;
+$val = 1234 + 4321.0 / 5 - 100.0 * 10;
+$fval = 12.0 + 11;
+
+//IO.Print("%i %i %i\n" % (1, 2, 3));
 
 // Test global return value
 return 20;

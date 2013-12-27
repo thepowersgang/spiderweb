@@ -1,4 +1,5 @@
 #!/usr/bin/sw
+#<?php
 
 class TestClass
 {
@@ -7,7 +8,7 @@ class TestClass
 	void __constructor()
 	{
 		// Do something
-		$this->v = 0;
+		$this->v = 99;
 	}
 	
 	void __destructor()
@@ -25,9 +26,11 @@ class TestClass
 	}
 }
 
-TestClass $tc = new TestClass();
+TestClass $tc();
 $tc->method_1(100, 1, 1);
 IO.Print("Final = " + $tc->method_1(0, 10, 5) + "\n");
 
-delete $tc;
+//$tc = null;
+
+# vim: ft=php
 
