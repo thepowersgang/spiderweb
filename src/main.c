@@ -35,7 +35,7 @@ tSpiderVariant	gScriptVariant = {
 
 char	*gsScriptFile;
 char	*gsCacheFile;
- int	gbCacheCompiled;
+ int	gbCacheCompiled = 1;
 
 // === CODE ===
 /**
@@ -152,6 +152,9 @@ int ParseArguments(int argc, char *argv[])
 			// Long arguments
 			if( strcmp(arg, "--cache") == 0 ) {
 				gbCacheCompiled = 1;
+			}
+			else if( strcmp(arg, "--no-cache") == 0 ) {
+				gbCacheCompiled = 0;
 			}
 			else {
 				// *shrug*
