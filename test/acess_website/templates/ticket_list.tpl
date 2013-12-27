@@ -1,13 +1,13 @@
 {include "header.tpl"}
 
       <a href="bugs.ss">Tickets</a>
-{if $lType!=""}
--&gt; <a href="ticket_list.ss?prj={$lProject}">{$lProject}</a>
+{if $lType}
+-&gt; <a href="{$SiteRoot}ticket_list.ss?prj={$lProject}">{$lProject}</a>
 -&gt; <b>{$lType}</b>
-{else}
+{elseif $lProject}
 -&gt; <b>{$lProject}</b>
 {endif}
--&gt; <a href="ticket_file.ss?{$lTypeCodes}">New</a><br/>
+-&gt; <a href="{$SiteRoot}ticket_file.ss?{$lTypeCodes}">New</a><br/>
 
 <table width="100%">
 <tr>
@@ -23,7 +23,7 @@
  <td>{$ticket.ID}</td>
  <td>{$ticket.type}</td>
  <td>{$ticket.status}</td>
- <td><a href="ticket_view.ss?id={$ticket.ID}">{$ticket.title}</a></td>
+ <td><a href="{$SiteRoot}ticket_view.ss/{$ticket.ID}">{$ticket.title}</a></td>
  <td>{$ticket.opened}<br/> {$ticket.filer|tickets_userlink}</td>
  <td><a href="users.ss?id={$ticket.owner_id}">{$ticket.owner|tickets_userlink}</a></td>
 </tr>

@@ -15,14 +15,15 @@ String	$lDesc = CGI.ReadPOST("desc");
 String	$lProject = CGI.ReadPOST("prj");
 String	$lType = CGI.ReadPOST("type");
 
-if( $lProject === null )
-	$lProject = CGI.ReadGET("prj");
-if( $lType === null )
-	$lType = CGI.ReadGET("type");
+if( $lProject === null ) {
+	$lProject = CGI.GetPathInfo(0) ?: CGI.ReadGET("prj");
+	$lType = CGI.GetPathInfo(1) ?: CGI.ReadGET("type");
+}
 
-if( CGI.ReadPOST("title") !== null )
+if( $lTitle !== null )
 {
-	String $q = "INSERT INTO tickets (ticket_title,ticket_filer,ticket_type,ticket_project,ticket_desc) VALUES ("
+	String $q = "INSERT INTO tickets (ticket_title,ticket_filer,ticket_type,ticket_project,ticket_desc)"
+		+" VALUES ("
 		+"'"+$dbconn->Escape($lTitle)+"',"
 		+$gUserID+","
 		+"'"+$dbconn->Escape($lType)+"',"

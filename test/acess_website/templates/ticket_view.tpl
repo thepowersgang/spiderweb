@@ -1,9 +1,9 @@
 {assign $lAltStylesheet="style.tickets.css"}
 {include "header.tpl"}
 
-      <a href="bugs.tpl">Tickets</a>
--&gt; <a href="ticket_list.ss?prj={$lTicket.project}">{$lTicket.project}</a>
--&gt; <a href="ticket_list.ss?prj={$lTicket.project}&amp;type={$lTicket.type}">{$lTicket.type}</a>
+      <a href="{$SiteRoot}bugs.ss">Tickets</a>
+-&gt; <a href="{$SiteRoot}ticket_list.ss/{$lTicket.project}">{$lTicket.project}</a>
+-&gt; <a href="{$SiteRoot}ticket_list.ss/{$lTicket.project}/{$lTicket.type}">{$lTicket.type}</a>
 -&gt; <b>{$lTicket.title}</b>
 
 <table>
@@ -25,7 +25,7 @@
  </tr>
  <tr>
   <td colspan="2">
-{$lTicket.desc}
+{$lTicket.desc|tickets_formattext}
   </td>
  </tr>
 </table>
@@ -37,7 +37,7 @@
 <span class="user">Posted by {$comment.user|tickets_userlink}</span>
 <span class="number">Comment #{$comment.num}</span>
 <div class="text">
-{$comment.text}
+{$comment.text|tickets_formattext}
 </div>
 </div>
 {foreachelse}
@@ -46,7 +46,7 @@
 </div>
 
 {if $UserName != ""}
-<form method="POST" action="ticket_edit.ss?id={$lTicketID}&amp;a=update">
+<form method="POST" action="{$SiteRoot}ticket_edit.ss?id={$lTicketID}&amp;a=update">
  <div class="ticket_postcomment">
   Post comment: <br />
   <textarea name="comment_text" rows="5" cols="30"></textarea>

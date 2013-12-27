@@ -1,7 +1,10 @@
 #<?php
 
+global String $SiteRoot = "/acess2sw/";
+
 include "database.inc.ss";
 global SpiderWeb.Template $tpl();
+$tpl->Assign("SiteRoot", $SiteRoot);
 
 String $gSessionHash = CGI.GetCookie("SWSESSIONID");
 CGI.Session $gSession($gSessionHash, "acess2sw");
@@ -44,41 +47,22 @@ $tpl->BindFilter("formatText", "formatText");
 String formatText(String $Input)
 {
 	String $output = $Input;
+	String $cGitBase = "http://git.mutabah.net/";
 	
-#	$output = Lang.Strings.RegexReplace($output, "^.*^", "<sup>$1</sup>");
-#	$output = Lang.Strings.RegexReplace($output, "_.*_", "<sub>$1</sub>");
 	$output = Lang.Strings.Replace($output, "\r\n", "\n");
 	$output = Lang.Strings.Replace($output, "&", "&amp;");
 	$output = Lang.Strings.Replace($output, "<", "&lt;");
 	$output = Lang.Strings.Replace($output, ">", "&gt;");
-	$output = Lang.Strings.Replace($output, "{{{", "<span style='font-size:small;font-family:mono'>");
-	$output = Lang.Strings.Replace($output, "}}}", "</span>");
+#	$output = Lang.Strings.RegexReplace($output, "^(.*)^", "<sup>$1</sup>");
+#	$output = Lang.Strings.RegexReplace($output, "_(.*)_", "<sub>$1</sub>");
+#	$output = Lang.Strings.RegexReplace($output, "\[git:([^/]+)/([^\]]+)\]",
+#		"<a href=\""+$cGitBase+"$1?a=commitdiff;h=$2\">$1/$2</a>");
+	// TODO: [git:repo/hash] -> http://git.mutabah.net/repo?a=commitdiff;h=hash
+	$output = Lang.Strings.Replace($output, "{{{", "<div style='font-size:small;font-family:mono'>");
+	$output = Lang.Strings.Replace($output, "}}}", "</div>");
 	$output = Lang.Strings.Replace($output, "\n", "<br/>\n");
 	
 	return $output;
-}
-
-String Ticket_GetUser(SpiderWeb.MySQL $dbconn, Integer $UID)
-{
-	String	$name;
-	if( $UID == 0 )
-	{
-		$name = "None";
-	}
-	else
-	{
-		String $q = "SELECT username FROM users WHERE uid="+$UID;
-		SpiderWeb.MySQL.Result $res = $dbconn->Query($q);
-		String[] $row = $res->GetNextRow();
-		if( $row ) 
-			$name = $row[0];
-		else {
-			$name = "Unknown";
-			$UID = -1;
-		}
-	}
-	
-	return "<a href=\"users.ss?id="+$UID+"\">"+$name+"</a>";
 }
 
 # vim: ft=php

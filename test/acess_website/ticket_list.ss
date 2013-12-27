@@ -2,6 +2,7 @@
 #<?php
 
 include "common.inc.ss";
+include "tickets_common.inc.ss";
 $tpl->Assign("PageID", "bugs");
 $tpl->Assign("PageTitle", "Issue List");
 
@@ -10,15 +11,12 @@ String $query = "SELECT ticket_id,ticket_title,ticket_filer,ticket_type,ticket_s
 String $lProject = CGI.GetPathInfo(0) ?: CGI.ReadGET("prj") ?: null;
 String $lType = CGI.GetPathInfo(1) ?: CGI.ReadGET("type") ?: null;
 if( $lProject )
-	$query += " AND ticket_project='" + $dbconn->Escape(CGI.ReadGET("prj")) + "'";
+	$query += " AND ticket_project='" + $dbconn->Escape($lProject) + "'";
 if( $lType )
-	$query += " AND ticket_type='" + $dbconn->Escape(CGI.ReadGET("type")) + "'";
+	$query += " AND ticket_type='" + $dbconn->Escape($lType) + "'";
 $tpl->Assign("lTypeCodes", "prj="+$lProject+"&amp;type="+$lType+"&amp;");
 $tpl->Assign("lProject", $lProject);
-if( $lType )
-	$tpl->Assign("lType", $lType);
-else
-	$tpl->Assign("lType", "");
+$tpl->Assign("lType", $lType);
 
 String $lSort = CGI.ReadGET("sort");
 if( $lSort !== null )

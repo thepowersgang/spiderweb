@@ -9,11 +9,11 @@
  <meta name="Generator" content="vim, SpiderScript, and Elbow Grease" />
  <meta name="Author" content="John Hodge (thePowersGang) - 20518201" />
  <meta name="Keywords" content="acess acess2 acessos thepowersgang operating-system" />
- <link rel="stylesheet" type="text/css" href="style.css" />
+ <link rel="stylesheet" type="text/css" href="{$SiteRoot}style.css" />
 {if $lAltStylesheet != ""}
- <link rel="stylesheet" type="text/css" href="{$lAltStylesheet}" />
+ <link rel="stylesheet" type="text/css" href="{$SiteRoot}./{$lAltStylesheet}" />
 {endif}
- <script type="text/javascript" src="script.js"></script>
+ <script type="text/javascript" src="{$SiteRoot}script.js"></script>
  <link rel="alternate" title="Acess2 News RSS" href="blog.rss.sw" type="application/rss+xml" />
 </head>
 <body>
@@ -22,7 +22,7 @@
   <center>I know Access has two 'c's</center>
  </div>
  <div id="menubar"><div>
-  <a href="index.ss" class="{?$PageID=="index"?"selected":""}">Home</a>
+  <a href="{$SiteRoot}index.ss" class="{?$PageID=="index"?"selected":""}">Home</a>
   <a href="history.ss" class="{?$PageID=="history"?"selected":""}">History</a>
   <a href="downloads.ss" class="{?$PageID=="downloads"?"selected":""}">Downloads</a>
   <a href="docs.ss" class="{?$PageID=="docs"?"selected":""}">Documentation</a>
@@ -45,5 +45,5 @@
 <h1>{$PageTitle}</h1>
 {endif}
 
-{* vim: ft=html
+{* vim: ft=smarty
 *}

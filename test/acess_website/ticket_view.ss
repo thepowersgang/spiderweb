@@ -2,9 +2,10 @@
 #<?php
 
 include "common.inc.ss";
+include "tickets_common.inc.ss";
 $tpl->Assign("PageID", "bugs");
 
-String $lTicketID_str = CGI.ReadGET("id");
+String $lTicketID_str = CGI.GetPathInfo(0) ?: CGI.ReadGET("id") ?: null;
 if($lTicketID_str === null)
 {
 	$tpl->Assign("ErrorMessage", "Please select a ticket");
@@ -24,19 +25,12 @@ if( $row === null ) {
 	return 0;
 }
 
-String makeuserlink(String $uid)
-{
-	global SpiderWeb.MySQL $dbconn;
-	return Ticket_GetUser($dbconn, (Integer)$uid);
-}
-$tpl->BindFilter("tickets_userlink", "makeuserlink");
-
 $tpl->Assign("PageTitle", "View Ticket");
 
 $tpl->Assign("lTicketID", $lTicketID);
 Lang.StringMap	$lTicket();
 $lTicket->set("title",   $row[0]);
-$lTicket->set("desc",    formatText($row[1]));
+$lTicket->set("desc",    $row[1]);
 $lTicket->set("type",    $row[2]);
 $lTicket->set("project", $row[3]);
 // TODO: Tags
@@ -50,15 +44,14 @@ $tpl->Assign("lTicket", $lTicket);
 SpiderWeb.MySQL.Result $res = DB_Query("SELECT cmt_time,cmt_user,cmt_text FROM ticket_comments WHERE cmt_ticket="+$lTicketID);
 Lang.StringMap[] $lComments($res->ResultCount());
 //String[] $row;
-Integer $i = 0;
-while( ($row = $res->GetNextRow()) !== null )
+for( Integer $i = 0; ($row = $res->GetNextRow()) !== null; $i ++ )
 {
 	Lang.StringMap $comment();
 	$comment->set("time", $row[0]);
 	$comment->set("user", $row[1]);
 	$comment->set("num", (String)$i);
 	$comment->set("text", $row[2]);
-	$lComments[$i++] = $comment;
+	$lComments[$i] = $comment;
 }
 $tpl->Assign("lComments", $lComments);
 
