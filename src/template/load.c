@@ -700,168 +700,168 @@ static void _addVerbatim(t_tplop **List, const char *Data, size_t Size)
 
 t_template *Template_int_Load(const char *Filename)
 {
-	char	buffer[BUFSIZ];
-	 int	ofs;
-	 int	ctrl_end;
-	 int	ctrl_start;
-	FILE	*rootfp;
-	FILE	*fp, *lastfp;
-	 int	i, j;
-	t_template	*ret;
-	t_parserstate	state;
+	char	buffer[BUFSIZ+1];
+	t_parserstate	state = {0};
 	
 	memset(&state, 0, sizeof(state));
 
 	// Open root template file
-	rootfp = fopen(Filename, "r");
+	FILE *rootfp = fopen(Filename, "r");
 	if( !rootfp ) {
 		perror("Opening template");
 		return NULL;
 	}
 
-//	printf("Parsing '%s'\n", Filename);	
-
-	ret = malloc( sizeof(*ret) );
+	t_template *ret = malloc( sizeof(t_template) );
 	ret->Sections = NULL;
 	state.CurList = &ret->Sections;
 
-	ofs = 0;
-	fp = rootfp;
-	lastfp = NULL;
+	size_t ofs = 0;
+	FILE	*fp = rootfp;
+	FILE	*lastfp = NULL;
+	 int	curmode = 0;	// 0: Normal, 1: Comment, 2+: Command
 	for( ;; )
 	{
-		//const char	*thisfile;
-		if( state.FStackPos ) {
-			fp = state.FStack[ state.FStackPos - 1 ].FP;
-		//	thisfile = state.FStack[ state.FStackPos - 1 ].Filename;
-		}
-		else {
-			fp = rootfp;
-		//	thisfile = Filename;
-		}
+		fp = (state.FStackPos ? state.FStack[ state.FStackPos - 1 ].FP : rootfp);
+		
+		// If we've just hit a {include ""} statement, then we need to ensure
+		// that the parent file is in a sane state
 		if( fp != lastfp && lastfp ) {
 			fseek(lastfp, -ofs, SEEK_CUR);
 			ofs = 0;
 		}
 		lastfp = fp;
-		
-		int len = fread(buffer + ofs, 1, BUFSIZ - ofs, fp);
+
+		assert(ofs < BUFSIZ);
+		size_t len = fread(buffer + ofs, 1, BUFSIZ - ofs, fp);
+		buffer[ofs+len] = 0;	// cap off (so strchr doesn't break);
 
 		// Zero read bytes is usually a problem...
-		if( len <= 0 && ofs != BUFSIZ ) {
-			if( ofs != 0 ) {
-				// TODO: Error?
+		if( len == 0 && ofs == 0 )
+		{
+			// Reached EOF, so roll back
+			if( state.FStackPos == 0 ) {
+				// Root file, just break out
+				break;
 			}
-			if( state.FStackPos ) {
-				state.FStackPos --;
-				fclose(state.FStack[state.FStackPos].FP);
-				free(state.FStack[state.FStackPos].Filename);
-				lastfp = NULL;
+
+			state.FStackPos --;
+			fclose(state.FStack[state.FStackPos].FP);
+			free(state.FStack[state.FStackPos].Filename);
+			// Set lastfp to null so we don't try to fseek on the now-closed handle
+			lastfp = NULL;
+		}
+		len += ofs;
+
+		if( curmode == 0 )
+		{
+			// Verbatim text mode
+			char *open_curl = strchr(buffer, '{');
+			if( open_curl ) {
+				ofs = open_curl - buffer;
+				_addVerbatim(state.CurList, buffer, ofs);
+				memmove(buffer, buffer+ofs, len - ofs);
+				ofs = len - ofs;	// fread offset
+				curmode = 2;
 				continue ;
 			}
-			break;
+			
+			_addVerbatim(state.CurList, buffer, len);
+			ofs = 0;
 		}
-
-		int cur_fstackpos = state.FStackPos;
-		
-		ctrl_end = 0;
-		ctrl_start = -1;
-		for( i = 0; i < ofs + len; i ++ )
+		else if( curmode == 1 )
 		{
-			if( buffer[i] == '{' )
-			{
-				char *ctrl_data;
-
-				if( i + 1 < ofs + len )
-				{
-					if( buffer[i+1] == '*' ) {
-						// Comment
-						_addVerbatim(state.CurList, buffer + ctrl_end, i - ctrl_end);
-						ctrl_end = 0;
-						for( j = i; j+1 < ofs+len; j ++ )
-						{
-							if( buffer[j] == '*' && buffer[j+1] == '}' ) {
-								ctrl_end = j+2;
-								break ;
-							}
-						}
-						if( ctrl_end == 0 )
-							break;	// Force more read
-						i = ctrl_end;
-						continue ;
-					}
-					else if( isblank(buffer[i+1]) ) {
-						// Treat as normal text is there's a space after '{'
-						continue ;
-					}
-				}
-
-				ctrl_start = i;
-				// Slightly hackily ignore newlines before a statement
-				if( i - ctrl_end && buffer[i-1] == '\n' )
-					i --;
-				_addVerbatim(state.CurList, buffer + ctrl_end, i - ctrl_end);
-				ctrl_end = 0;
-				for( j = i; j < ofs+len; j ++ )
-				{
-					if( buffer[j] == '}' ) {
-						ctrl_end = j;
-						break;
-					}
-				}
-				if( ctrl_end == 0 )
-					break;	// Force more to be read
-				
-				buffer[ctrl_end] = '\0';
-
-				ctrl_data = buffer + ctrl_start + 1;
-		
-				void *listhead = Template_int_ParseStatement(&state, Filename, ctrl_data);
-				if( listhead == NULL ) {
-					fprintf(stderr, "Something bad happened\n");
-					while( state.FStackPos -- )
-					{
-						fclose(state.FStack[state.FStackPos].FP);
-						free(state.FStack[state.FStackPos].Filename);
-					}
-					fclose(rootfp);
-					return ret;
-				}
-				state.CurList = listhead;
-
-				ctrl_start = -1;
-				ctrl_end += 1;
-				i = ctrl_end;
-				if( i + 1 < ofs + len && buffer[i+1] == '\n' )
-					i ++;
-				
-				// Detect when an include statement is hit
-				if( cur_fstackpos < state.FStackPos ) {
-					ofs = (ofs + len) - ctrl_end;	// Tell the fseek where to reset to
-					break ;	// Read again
-				}
+			// Comment
+			// - Look for the '*' from "*}"
+			char *star = strchr(buffer, '*');
+			if( !star ) {
+				// If it wasn't found, discard this buffer and continue
+				ofs = 0;
+				continue ;
 			}
+			// If the star is at the end of the string, keep it in the buffer
+			if( star-buffer == len-1 ) {
+				// Special case to avoid an infinite loop with '*' at EOF
+				if( star == buffer ) {
+					ofs = 0;
+					continue ;
+				}
+				buffer[0] = '*';	// hack, we know what this is, so don't bother with memmove
+				ofs = 1;
+				continue ;
+			}
+			// If the star is not followed by a '}', discard this buffer
+			if( star[1] != '}' ) {
+				ofs = 0;
+				continue ;
+			}
+			
+			// Found "*}", discard everything before it and return to normal mode
+			ofs = (star-buffer)+2;
+			memmove(buffer, buffer+ofs, len-ofs);
+			ofs = len-ofs;
+			curmode = 0;
 		}
-		
-		// Detect an include statement (and don't output anything else after it)
-		if( cur_fstackpos < state.FStackPos )
-			continue ;	// Read again
-		
-		if( ctrl_start == -1 )
-			_addVerbatim(state.CurList, buffer + ctrl_end, (ofs + len) - ctrl_end);
-		if( ctrl_start > 0 ) {
-			memmove(buffer, buffer + ctrl_start, (ofs + len) - ctrl_start);
-			ofs = (ofs + len) - ctrl_start;
-		}
-		
-		if( len == 0 )	{
-			_addVerbatim(state.CurList, buffer, ofs);
-			break;
+		else
+		{
+			// Command
+			assert(buffer[0] == '{');
+			
+			if( buffer[1] == '*' ) {
+				// detect a comment starting, and move to comment mode
+				curmode = 1;
+				memmove(buffer, buffer+2, len-2);
+				ofs = len-2;
+				continue ;
+			}
+			
+			char *close_curl = strchr(buffer, '}');
+			if( !close_curl ) {
+				// We _should_ have BUFSIZ bytes, so just emit this as verbatim and continue
+				_addVerbatim(state.CurList, buffer, len);
+				ofs = 0;
+				continue ;
+			}
+			char *newline = strchr(buffer, '\n');
+			if( newline && newline < close_curl ) {
+				// If a newline occurs before the ending '}', emit as verbatim
+				_addVerbatim(state.CurList, buffer, len);
+				ofs = 0;
+				continue ;
+			}
+			
+			// We have the entire command in the buffer now (or, we should), so parse it
+			*close_curl = '\0';
+			
+			// - Skip the opening '}'
+			//printf("Command: '%s'\n", buffer+1);
+			void *listhead = Template_int_ParseStatement(&state, Filename, buffer+1);
+			if( listhead == NULL ) {
+				fprintf(stderr, "Something bad happened\n");
+				goto _error;
+			}
+			state.CurList = listhead;
+			
+			// Return to normal mode with tail of buffer
+			ofs = (close_curl+1) - buffer;
+			memmove(buffer, buffer+ofs, len-ofs);
+			ofs = len-ofs;
+			buffer[ofs] = 0;
+			//printf("Tail: '%s'\n", buffer);
+			curmode = 0;
 		}
 	}
 	
 	fclose(rootfp);
 
+	return ret;
+_error:
+	while( state.FStackPos -- )
+	{
+		fclose(state.FStack[state.FStackPos].FP);
+		free(state.FStack[state.FStackPos].Filename);
+	}
+	fclose(rootfp);
 	return ret;
 }
 
