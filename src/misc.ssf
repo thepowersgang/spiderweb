@@ -9,6 +9,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <spiderweb_internal.h>
+#include <math.h>
+
+@NAMESPACE Math
+@{
+@FUNCTION Real sqrt(Real val)
+@{
+	@RETURN sqrt(val);
+@}
+@}
 
 @FUNCTION String RandString(Integer Bytes)
 @{
