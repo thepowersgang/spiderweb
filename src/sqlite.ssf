@@ -1,0 +1,181 @@
+/*
+ * SpiderWeb Scripting Suite
+ * - By John Hodge (thePowersGang)
+ *
+ * sqlite.ssf
+ * - SQLite API
+ */
+#include <stdio.h>
+#include <string.h>
+#include <sqlite3.h>
+
+@NAMESPACE SpiderWeb
+@{
+
+typedef struct
+{
+	sqlite3	*Handle;
+} t_db_obj;
+
+typedef struct
+{
+	 int	nRows;
+	 int	rv;
+	sqlite3_stmt	*res;
+	t_db_obj	*dbinfo;
+} t_result_obj;
+
+@CLASS SQLite
+@{
+	@CONSTRUCTOR (String Path)
+	@{
+		t_db_obj	*info;
+		tSpiderObject	*this = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(*info));
+		if(!this)	return SpiderScript_ThrowException(Script, SS_EXCEPTION_BUG, "Object allocation failure");
+		info = this->OpaqueData;
+
+		 int	rv = sqlite3_open(Path->Data, &info->Handle);
+		if(rv != SQLITE_OK) {
+			// TODO: Exception
+			SpiderScript_DereferenceObject(this);
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+				"Unable to open database '%.*s' (%i)", Path->Length, Path->Data, rv);
+		}
+		
+		@RETURN this;
+	@}
+	
+	@DESTRUCTOR
+	@{
+		t_db_obj	*info = this->OpaqueData;
+		sqlite3_close(info->Handle);
+	@}
+
+	@FUNCTION String LastErrorString()
+	@{
+		t_db_obj	*info = this->OpaqueData;
+		const char *errstr = sqlite3_errmsg(info->Handle);
+		@RETURN SpiderScript_CreateString(strlen(errstr), errstr);
+	@}
+
+	@FUNCTION SpiderWeb.SQLite.Result Query(String QueryString)
+	@{
+		t_db_obj	*info = this->OpaqueData;
+		 int	rv;
+		sqlite3_stmt	*stmt;
+		
+		rv = sqlite3_prepare_v2(info->Handle, QueryString->Data, QueryString->Length, &stmt, NULL);
+		if( rv ) {
+			// Some sort of error
+			// TODO: Exception
+			@RETURN NULL;
+		}
+		
+		tSpiderObject *ret;
+		rv = SpiderScript_CreateObject_Type(Script, @TYPECODE(SpiderWeb.SQLite.Result).Def,
+			&ret, 0, NULL, NULL, NULL);
+		if( rv < 0 ) {
+			// Can't construct?
+			// TODO: Exception?
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_BUG,
+				"SpiderWeb.SQLite->Query Error creating result");
+		}
+		t_result_obj	*ret_info = ret->OpaqueData;
+
+		ret_info->res = stmt;
+		ret_info->nRows = -1;
+		ret_info->rv = sqlite3_step(ret_info->res);
+		if( ret_info->rv == SQLITE_DONE )
+			ret_info->nRows = sqlite3_changes(info->Handle);
+		
+		@RETURN ret;
+	@}
+	
+	@FUNCTION String Escape(String Input)
+	@{
+		t_db_obj	*info = this->OpaqueData;
+		if( !info->Handle || !Input )
+			@RETURN NULL;
+		
+		// Should be good enough
+		// - sqlite's %q format escapes embedded ' characters
+		char *tmp = sqlite3_mprintf("%.*q", Input->Length, Input->Data);
+		tSpiderString *ret = SpiderScript_CreateString(strlen(tmp), tmp);
+		sqlite3_free(tmp);
+		@RETURN ret;
+	@}
+@}
+
+@NAMESPACE SQLite
+@{
+
+@CLASS Result
+@{
+	@CONSTRUCTOR ()
+	@{
+		// TODO: Somehow determine if the script constructed this?
+		t_result_obj	*info;
+		tSpiderObject	*ret = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(*info));
+		if(!ret)	@RETURN NULL;
+		info = ret->OpaqueData;
+		info->nRows = -1;
+		info->res = NULL;
+		info->rv = 0;
+		@RETURN ret;
+	@}
+	
+	@DESTRUCTOR
+	@{
+		t_result_obj	*info = this->OpaqueData;
+		if( info->res )
+			sqlite3_finalize(info->res);
+	@}
+	
+	@FUNCTION Integer ResultCount ()
+	@{
+		t_result_obj	*info = this->OpaqueData;
+		if( info->nRows == -1 ) {
+			#if 0
+			 int	nRows = 0;
+			while( sqlite3_step(info->res) == SQLITE_ROW )
+				nRows ++;
+			sqlite3_reset(info->res);
+			#endif
+		}
+		@RETURN info->nRows;
+	@}
+	
+	@FUNCTION String[] GetNextRow()
+	@{
+		t_result_obj	*info = this->OpaqueData;
+		if(!info->res)	@RETURN NULL;
+		
+		if( info->rv != SQLITE_ROW )
+		{
+			if( info->rv == SQLITE_DONE )
+				@RETURN NULL;	// complete
+			else
+				return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+					"SQLite Error: %s", sqlite3_errmsg(info->dbinfo->Handle));
+		}
+		
+		int nf = sqlite3_column_count(info->res);
+		
+		tSpiderArray *ret = SpiderScript_CreateArray(@TYPECODE(String), nf);
+		if( !ret )	@RETURN NULL;
+		
+		for(int i = 0; i < nf; i ++ )
+		{
+			const void *data = sqlite3_column_blob(info->res, i);
+			ret->Strings[i] = SpiderScript_CreateString(sqlite3_column_bytes(info->res, i), data);
+			// don't free values from sqlite3_column_*
+		}
+		info->rv = sqlite3_step(info->res);
+		@RETURN ret;
+	@}
+@}
+@}
+
+@} // SpiderWeb
+
+// vim: ft=c

@@ -8,16 +8,21 @@ OBJ += module_cgi.o
 BIN = ../sw
 
 USE_MYSQL ?= yes
+USE_SQLITE ?= yes
 
 EXPORT_FILES := misc.ssf template/object.ssf fileio.ssf cgi.ssf
 
 CPPFLAGS += -I .. -I .
 CFLAGS  += -Wall -Werror -g -std=gnu99
-LDFLAGS += -L .. -lspiderscript -g
+LDFLAGS += -L .. -lspiderscript -lm -g
 
 ifeq ($(USE_MYSQL),yes)
   EXPORT_FILES += mysql.ssf
   LDFLAGS += -lmysqlclient
+endif
+ifeq ($(USE_SQLITE),yes)
+  EXPORT_FILES += sqlite.ssf
+  LDFLAGS += -lsqlite3
 endif
 
 EXPORT_FILES := $(EXPORT_FILES:%.gen.o=%.ssf)
