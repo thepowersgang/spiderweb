@@ -10,12 +10,13 @@
 #include <spiderscript.h>
 #include "../spiderweb_internal.h"
 #include "template_common.h"
+#include <assert.h>
 
 // === PROTOTYPES ===
 t_map_entry	*Template_int_GetMapItem(t_map *Map, const char *Key);
 void	Template_int_DelMapItem(t_map *Map, const char *Key);
 t_map_entry	*Template_int_AddMapItem(t_map *Map, enum e_map_entry_types Type, const char *Key, int DataSize);
-t_map_entry	*Template_int_AddMapItem_String(t_map *Map, const char *Key, const char *String);
+t_map_entry	*Template_int_AddMapItem_String(t_map *Map, const char *Key, size_t Len, const char *String);
 void	Template_int_FreeMap(t_map *Map);
 
 // --- Key/Value Map Manipulation ---
@@ -90,12 +91,13 @@ t_map_entry *Template_int_AddMapItem_SubMap(t_map *Map, const char *Key)
 	return ent;
 }
 
-t_map_entry *Template_int_AddMapItem_String(t_map *Map, const char *Key, const char *String)
+t_map_entry *Template_int_AddMapItem_String(t_map *Map, const char *Key, size_t Len, const char *String)
 {
 	t_map_entry *ent;
-	ent = Template_int_AddMapItem(Map, MAPENT_STRING, Key, strlen(String)+1);
+	ent = Template_int_AddMapItem(Map, MAPENT_STRING, Key, Len+1);
+	if( !ent )	return NULL;
 	ent->String = ent->Data;
-	strcpy(ent->String, String);
+	strncpy(ent->String, String, Len+1);
 	return ent;
 }
 

@@ -54,6 +54,10 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSp
 		 int	i;
 		tSpiderTypeRef	type = ValueType;
 		type.ArrayDepth --;
+
+		if( !ValuePtr )
+			return SpiderScript_ThrowException_NullRef(Script, "Template::AddItem - Array");
+
 		const tSpiderArray	*array = ValuePtr;
 		t_map_entry *submap = Template_int_AddMapItem_SubMap( Map, Key );
 		
@@ -70,6 +74,9 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSp
 		tSpiderString	*val;
 		tSpiderTypeRef	rettype;
 		 int	rv, i;
+
+		if( !ValuePtr )
+			return SpiderScript_ThrowException_NullRef(Script, "Template::AddItem - StringMap");
 	
 		// Call the ->keys() method (with the `this` parameter)	
 		rv = SpiderScript_ExecuteMethod(Script, "keys", &rettype, &keys, 1, &ValueType, &ValuePtr, NULL);
@@ -101,7 +108,7 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSp
 			// TODO: Throw exception
 			return -1;
 		}
-		Template_int_AddMapItem_String(Map,Key, str->Data);
+		Template_int_AddMapItem_String(Map, Key, str->Length, str->Data);
 		SpiderScript_DereferenceString(str);
 	}
 	return 0;
@@ -167,8 +174,18 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSp
 @{
 	t_obj_Template	*info = this->OpaqueData;
 
+	if( !Key )	return SpiderScript_ThrowException_NullRef(Script, "Template.Assign - Key");
+
 	Template_int_AddItem(Script, &info->ValueMap, Key->Data, @TYPEOF(Value), Value );
 	
+	@RETURN;
+@}
+
+@FUNCTION void Clear(String Key)
+@{
+	t_obj_Template	*info = this->OpaqueData;
+	if( !Key )	return SpiderScript_ThrowException_NullRef(Script, "Template.Clear - Key");
+	Template_int_DelMapItem(&info->ValueMap, Key->Data);
 	@RETURN;
 @}
 

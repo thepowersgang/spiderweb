@@ -188,7 +188,7 @@ extern void	Template_int_DelMapItem(t_map *Map, const char *Key);
 extern t_map_entry	*Template_int_DuplicateMapItem(t_map *Map, const char *Key, int Type, void *Ptr);
 extern t_map_entry	*Template_int_AddMapItem_SubMap(t_map *Map, const char *Key);
 extern t_map_entry	*Template_int_AddMapItem_Ptr(t_map *Map, const char *Key, t_map_entry *Ptr);
-extern t_map_entry	*Template_int_AddMapItem_String(t_map *Map, const char *Key, const char *String);
+extern t_map_entry	*Template_int_AddMapItem_String(t_map *Map, const char *Key, size_t Len, const char *String);
 //extern t_map_entry	*TemplatE_int_AddMapItem_Integer(t_map *Map, const char *Key, int Value);
 extern void	Template_int_FreeMap(t_map *Map);
 
