@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sqlite3.h>
+#include <errno.h>	// hack
 
 @NAMESPACE SpiderWeb
 @{
@@ -58,6 +59,12 @@ typedef struct
 		@RETURN SpiderScript_CreateString(strlen(errstr), errstr);
 	@}
 
+	@FUNCTION Integer LastInsertRowID()
+	@{
+		t_db_obj	*info = this->OpaqueData;
+		@RETURN sqlite3_last_insert_rowid(info->Handle);
+	@}
+
 	@FUNCTION SpiderWeb.SQLite.Result Query(String QueryString)
 	@{
 		t_db_obj	*info = this->OpaqueData;
@@ -87,6 +94,12 @@ typedef struct
 		ret_info->rv = sqlite3_step(ret_info->res);
 		if( ret_info->rv == SQLITE_DONE )
 			ret_info->nRows = sqlite3_changes(info->Handle);
+		else if( ret_info->rv != SQLITE_ROW ) {
+			SpiderScript_DereferenceObject(ret);
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+				"SpiderWeb.SQLite->Query error: 0x%x %s %s", ret_info->rv, sqlite3_errstr(ret_info->rv),
+					strerror(errno));
+		}
 		
 		@RETURN ret;
 	@}
@@ -135,11 +148,13 @@ typedef struct
 	@{
 		t_result_obj	*info = this->OpaqueData;
 		if( info->nRows == -1 ) {
-			#if 0
-			 int	nRows = 0;
+			#if 1
+			 int	nRows = 1;
 			while( sqlite3_step(info->res) == SQLITE_ROW )
 				nRows ++;
 			sqlite3_reset(info->res);
+			info->rv = sqlite3_step(info->res);
+			info->nRows = nRows;
 			#endif
 		}
 		@RETURN info->nRows;
