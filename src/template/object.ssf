@@ -186,7 +186,6 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSp
 	t_obj_Template	*info = this->OpaqueData;
 	if( !Key )	return SpiderScript_ThrowException_NullRef(Script, "Template.Clear - Key");
 	Template_int_DelMapItem(&info->ValueMap, Key->Data);
-	@RETURN;
 @}
 
 @FUNCTION void Display(String tpl_name)
@@ -202,8 +201,8 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSp
 	tpl_data = Template_int_Load(tpl_name->Data);
 	if( !tpl_data )
 	{
-		printf("Unable to find template `%s`\n", tpl_name->Data);
-		// TODO: Exception
+		return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC, "Unable to find template %p %zi'%.*s'\n",
+			tpl_name, tpl_name->Length, tpl_name->Length, tpl_name->Data);
 	}
 	else
 	{

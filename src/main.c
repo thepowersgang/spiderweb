@@ -168,5 +168,5 @@ void HandleErrorMessage(tSpiderScript *Script, const char *Message)
 {
 	CGI_SendHeadersOnce();
 	// TODO: HTML Prettyness?
-	printf("Runtime Error: %s\n", Message);
+	printf("Runtime Error: %s<br/>\n", Message);
 }

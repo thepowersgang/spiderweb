@@ -11,6 +11,7 @@ USE_MYSQL ?= yes
 USE_SQLITE ?= yes
 
 EXPORT_FILES := misc.ssf template/object.ssf fileio.ssf cgi.ssf
+EXPORT_FILES += sql.ssf
 
 CPPFLAGS += -I .. -I .
 CFLAGS  += -Wall -Werror -g -std=gnu99
@@ -19,10 +20,12 @@ LDFLAGS += -L .. -lspiderscript -lm -g
 ifeq ($(USE_MYSQL),yes)
   EXPORT_FILES += mysql.ssf
   LDFLAGS += -lmysqlclient
+#  CPPFLAGS += -DENABLE_MYSQL=1
 endif
 ifeq ($(USE_SQLITE),yes)
   EXPORT_FILES += sqlite.ssf
   LDFLAGS += -lsqlite3
+  CPPFLAGS += -DENABLE_SQLITE=1
 endif
 
 EXPORT_FILES := $(EXPORT_FILES:%.gen.o=%.ssf)

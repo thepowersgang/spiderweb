@@ -1,0 +1,567 @@
+/*
+ * SpiderWeb Scripting Suite
+ * - By John Hodge (thePowersGang)
+ *
+ * sql.ssf
+ * - Generic SQL API
+ */
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>	// hack
+#include <stdbool.h>
+#if ENABLE_SQLITE
+# include <sqlite3.h>
+#endif
+#if ENABLE_MYSQL
+# include <mysql/mysql.h>
+#endif
+
+enum eDBTypes
+{	
+	DBT_NOP,
+	#if ENABLE_MYSQL
+	DBT_MYSQL,
+	#endif
+	#if ENABLE_SQLITE
+	DBT_SQLITE,
+	#endif
+};
+
+typedef struct 
+{
+	enum eDBTypes	Type;
+	union {
+		#if ENABLE_MYSQL
+		MYSQL	MySQL;
+		#endif
+		#if ENABLE_SQLITE
+		sqlite3	*SQLite;
+		#endif
+		 int	Nop;
+	} Handle;
+} t_db_obj;
+
+typedef struct
+{
+	t_db_obj	*dbinfo;
+	bool	bFinalised;
+	 int	nRows;
+	 int	CurRow;
+	union {
+		#if ENABLE_SQLITE
+		struct {
+			sqlite3_stmt	*res;
+			 int	rv;
+		} SQLite;
+		#endif
+	};
+} t_result_obj;
+
+#if ENABLE_SQLITE
+void sw_sql_sqlite_free_string_by_data(void *dataptr)
+{
+	tSpiderString	*str = (void*)((char*)dataptr - offsetof(tSpiderString,Data));
+	
+	SpiderScript_DereferenceString(str);
+}
+#endif
+
+static int sql_bind_int(t_result_obj *Result, int Index, tSpiderInteger Value)
+{
+	switch(Result->dbinfo->Type)
+	{
+	#if ENABLE_SQLITE
+	case DBT_SQLITE:
+		return sqlite3_bind_int64(Result->SQLite.res, Index, Value);
+	#endif
+	case DBT_NOP:
+		return 0;
+	}
+	return 1;
+}
+
+static int sql_bind_string(t_result_obj *Result, int Index, const tSpiderString *Value)
+{
+	switch(Result->dbinfo->Type)
+	{
+	#if ENABLE_SQLITE
+	case DBT_SQLITE:
+		SpiderScript_ReferenceString(Value);
+		return sqlite3_bind_text(Result->SQLite.res, Index, Value->Data, Value->Length, sw_sql_sqlite_free_string_by_data);
+	#endif
+	case DBT_NOP:
+		return 0;
+	}
+	return 1;
+}
+
+static int get_exception(tSpiderScript *Script, t_db_obj *dbinfo, int rv)
+{
+	switch(dbinfo->Type)
+	{
+	#if ENABLE_SQLITE
+	case DBT_SQLITE:
+		return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+			"sqlite error %s", sqlite3_errmsg(dbinfo->Handle.SQLite));
+	#endif
+	case DBT_NOP:
+		return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC, "SQL Nop Huh");
+	}
+	return 1;
+}
+
+@NAMESPACE SpiderWeb
+@{
+
+@CLASS SQL
+@{
+
+	@CONSTRUCTOR ()
+	@{
+		return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC, "SpiderWeb.SQL cannot be constructed");
+	@}
+	
+	@DESTRUCTOR
+	@{
+	@}
+
+	
+	@FUNCTION String LastErrorString()
+	@{
+		t_db_obj	*info = this->OpaqueData;
+		switch( info->Type )
+		{
+		#if ENABLE_SQLITE
+		case DBT_SQLITE: {
+			const char *errstr = sqlite3_errmsg(info->Handle.SQLite);
+			@RETURN SpiderScript_CreateString(strlen(errstr), errstr);
+			}
+		#endif
+		case DBT_NOP:
+			@RETURN NULL;
+		}
+		@RETURN NULL;
+	@}
+
+	@FUNCTION Integer LastInsertRowID()
+	@{
+		t_db_obj	*info = this->OpaqueData;
+		
+		switch( info->Type )
+		{
+		#if ENABLE_SQLITE
+		case DBT_SQLITE:
+			@RETURN sqlite3_last_insert_rowid(info->Handle.SQLite);
+		#endif
+		case DBT_NOP:
+			@RETURN 0;
+		}
+		@RETURN 0;
+	@}
+
+	@FUNCTION SpiderWeb.SQL.Result PrepQuery(String QueryString, ...)
+	@{
+		t_db_obj	*info = this->OpaqueData;
+		 int	rv;
+
+		t_result_obj	*ret_info;
+		tSpiderObject *ret = SpiderScript_AllocateObject(Script,
+			&gExports_class_SpiderWeb_SQL_Result, sizeof(*ret_info));
+		if( !ret ) {
+			// Can't construct?
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_BUG,
+				"SpiderWeb.SQL->PrepareQuery Error creating result");
+		}
+		ret_info = ret->OpaqueData;
+		ret_info->dbinfo = info;
+		ret_info->nRows = -1;
+		
+		switch( info->Type )
+		{
+		#if ENABLE_SQLITE
+		case DBT_SQLITE:
+			rv = sqlite3_prepare_v2(info->Handle.SQLite,
+				QueryString->Data, QueryString->Length,
+				&ret_info->SQLite.res, NULL);
+			break;
+		#endif
+		case DBT_NOP:
+			rv = 0;
+			break;
+		}
+		if( rv != 0 )
+		{
+			//return get_exception(Script, info, rv);
+			@RETURN NULL;
+		}
+		
+		 int	idx = 1;
+		for( int i = 0; i < VArgC; i ++ )
+		{
+			tSpiderTypeRef	type = @TYPEOF([i]);
+			if( SS_GETARRAYDEPTH( type ) ) {
+			}
+			//else if( SS_ISTYPEOBJECT( type ) )
+			//{
+			//	tSpiderObject	*obj = @OBJECT( [i] );
+			//	rv = 
+			//}
+			else if( SS_ISCORETYPE(type, SS_DATATYPE_INTEGER) )
+			{
+				tSpiderInteger	val = @INTEGER( [i] );
+				rv = sql_bind_int(ret_info, idx, val);
+			}
+			else if( SS_ISCORETYPE(type, SS_DATATYPE_STRING) )
+			{
+				const tSpiderString	*val = @STRING( [i] );
+				rv = sql_bind_string(ret_info, idx, val);
+			}
+			else
+			{
+				SpiderScript_DereferenceObject(ret);
+				return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+					"Unhandled parameter type '%s'",
+					SpiderScript_GetTypeName(Script, type));
+			}
+			if( rv != SQLITE_OK ) {
+				// Oh...
+				SpiderScript_DereferenceObject(ret);
+				return get_exception(Script, info, rv);
+			}
+			idx ++;
+		}
+		
+		@RETURN ret;
+	@}
+
+	@FUNCTION SpiderWeb.SQL.Result Query(String QueryString, ...)
+	@{
+		 int	rv;
+		
+		// 1. Prepare a query
+		tSpiderObject	*ret;
+		tSpiderTypeRef	ret_type;
+		rv = SpiderScript_ExecuteMethod(Script, "PrepQuery", &ret_type, &ret,
+			NArgs, ArgTypes, Args, NULL);
+		if( rv )	return rv;
+		if( !SS_TYPESEQUAL(ret_type, @TYPE(SpiderWeb.SQL.Result)) ) {
+			SpiderScript_DereferenceObject(ret);
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_BUG,
+				"SQL->PrepQuery returned something other than SpiderWeb.SQL.Result");
+		}
+
+
+		// 2. Run the query
+		tSpiderBool	bool_ret;
+		rv = SpiderScript_ExecuteMethod(Script, "Run", &ret_type, &bool_ret, 1, &ret_type, (const void*const*)&ret, NULL);
+		if( rv ) {
+			SpiderScript_DereferenceObject(ret);
+			return rv;
+		}
+		
+		if( !SS_ISCORETYPE(ret_type, SS_DATATYPE_BOOLEAN) ) {
+			SpiderScript_DereferenceObject(ret);
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_BUG,
+				"SQL.Result->Run returned something other than Boolean");
+		}
+		
+		if( !bool_ret )
+		{
+			SpiderScript_DereferenceObject(ret);
+			@RETURN NULL;
+		}
+
+		@RETURN ret;
+	@}
+
+	@FUNCTION String Escape(String Input)
+	@{
+		t_db_obj	*info = this->OpaqueData;
+		
+		if( !Input )
+			@RETURN NULL;
+		
+		
+		switch( info->Type )
+		{
+		#if ENABLE_SQLITE
+		case DBT_SQLITE: {
+			// Should be good enough
+			// - sqlite's %q format escapes embedded ' characters
+			char *tmp = sqlite3_mprintf("%.*q", Input->Length, Input->Data);
+			tSpiderString *ret = SpiderScript_CreateString(strlen(tmp), tmp);
+			sqlite3_free(tmp);
+			@RETURN ret;
+			break; }
+		#endif
+		case DBT_NOP:
+			SpiderScript_ReferenceString(Input);
+			@RETURN Input;
+		}
+		@RETURN NULL;
+	@}
+@}
+
+@NAMESPACE SQL
+@{
+
+@FUNCTION SpiderWeb.SQL MySQL(String Server, String User, String Password, String Database)
+@{
+#if ENABLE_MYSQL
+	@RETURN NULL;
+#else
+	return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC, "MySQL support not compiled in");
+#endif
+@}
+
+@FUNCTION SpiderWeb.SQL SQLite(String Filename)
+@{
+#if ENABLE_SQLITE
+	t_db_obj	*info;
+	tSpiderObject	*this = SpiderScript_AllocateObject(Script, &gExports_class_SpiderWeb_SQL, sizeof(*info));
+	if(!this)	return SpiderScript_ThrowException(Script, SS_EXCEPTION_MEMORY, "Object allocation failure");
+	info = this->OpaqueData;
+	info->Type = DBT_SQLITE;
+
+	 int	rv = sqlite3_open(Filename->Data, &info->Handle.SQLite);
+	if(rv != SQLITE_OK) {
+		SpiderScript_DereferenceObject(this);
+		return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+			"Unable to open database '%.*s' (%i)", Filename->Length, Filename->Data, rv);
+	}
+	
+	@RETURN this;
+#else
+	return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC, "SQLite support not compiled in");
+#endif
+@}
+
+@CLASS Result
+@{
+	@CONSTRUCTOR ()
+	@{
+		return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC, "SpiderWeb.SQL.Result cannot be constructed");
+	@}
+	
+	@DESTRUCTOR
+	@{
+		t_result_obj	*info = this->OpaqueData;
+		switch(info->dbinfo->Type)
+		{
+		#if ENABLE_SQLITE
+		case DBT_SQLITE:
+			sqlite3_finalize(info->SQLite.res);
+			break;
+		#endif
+		case DBT_NOP:
+			break;
+		}
+	@}
+	
+	@FUNCTION void Reset ()
+	@{
+		t_result_obj	*info = this->OpaqueData;
+		switch(info->dbinfo->Type)
+		{
+		#if ENABLE_SQLITE
+		case DBT_SQLITE:
+			sqlite3_reset(info->SQLite.res);
+			break;
+		#endif
+		case DBT_NOP:
+			break;
+		}
+		info->bFinalised = false;
+		info->nRows = -1;
+		info->CurRow = 0;
+	@}
+	
+	@FUNCTION void Bind( Integer Index, * Value)
+	@{
+		t_result_obj	*info = this->OpaqueData;
+		 int	rv;
+
+		// TODO: Ensure that query hasn't been executed
+		if( info->bFinalised )
+		{
+			// Query has been finalised
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+				"Calling SQL.Result->Bind on finalised query");
+		}
+		
+		tSpiderTypeRef	type = @TYPEOF(Value);
+		if( SS_GETARRAYDEPTH( type ) ) {
+		}
+		//else if( SS_ISTYPEOBJECT( type ) )
+		//{
+		//	tSpiderObject	*obj = @OBJECT( Value );
+		//	rv = 
+		//}
+		else if( SS_ISCORETYPE(type, SS_DATATYPE_INTEGER) )
+		{
+			tSpiderInteger	val = @INTEGER( Value );
+			rv = sql_bind_int(info, Index, val);
+		}
+		else if( SS_ISCORETYPE(type, SS_DATATYPE_STRING) )
+		{
+			const tSpiderString	*val = @STRING( Value );
+			rv = sql_bind_string(info, Index, val);
+		}
+		else
+		{
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_ARGUMENT,
+				"Unhandled parameter type '%s'",
+				SpiderScript_GetTypeName(Script, type));
+		}
+		if( rv != SQLITE_OK ) {
+			// Oh...
+			return get_exception(Script, info->dbinfo, rv);
+		}
+	@}
+
+	@FUNCTION Boolean Run ()
+	@{
+		t_result_obj	*info = this->OpaqueData;
+	
+		if( info->bFinalised )
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+				"Called ->Run on active query"
+				);
+		info->bFinalised = true;
+	
+		switch(info->dbinfo->Type)
+		{
+		#if ENABLE_SQLITE
+		case DBT_SQLITE:	
+			info->SQLite.rv = sqlite3_step(info->SQLite.res);
+			if( info->SQLite.rv == SQLITE_DONE || info->SQLite.rv == SQLITE_ROW ) {
+				@RETURN 1;
+			}
+			else {
+				return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+					"SpiderWeb.SQLite->Query error: 0x%x '%s' '%s'",
+					info->SQLite.rv, sqlite3_errmsg(info->dbinfo->Handle.SQLite),
+					strerror(errno));
+			}
+			break;
+		#endif
+		case DBT_NOP:
+			@RETURN 1;
+		}
+		
+		@RETURN 0;
+	@}
+
+	@FUNCTION String[] GetNextRow()
+	@{
+		t_result_obj	*info = this->OpaqueData;
+	
+		if( !info->bFinalised ) {
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+				"Called ->GetNextRow on inactive query"
+				);
+		}
+		
+		unsigned int	nf;
+		
+		// Get column count
+		switch( info->dbinfo->Type )
+		{
+		#if ENABLE_SQLITE
+		case DBT_SQLITE:
+			if( info->SQLite.rv == SQLITE_DONE ) {
+				info->nRows = info->CurRow;
+				@RETURN NULL;
+			}
+			nf = sqlite3_column_count(info->SQLite.res);
+			break;
+		#endif
+		case DBT_NOP:
+			@RETURN NULL;
+		}
+
+		tSpiderArray *ret = SpiderScript_CreateArray(@TYPECODE(String), nf);
+		if( !ret )	return SpiderScript_ThrowException(Script, SS_EXCEPTION_MEMORY,
+			"SpiderWeb.SQL.Result->GetNextRow - String[%i]", nf);
+		
+		// Get conent
+		switch( info->dbinfo->Type )
+		{
+		#if ENABLE_SQLITE
+		case DBT_SQLITE:
+			for(unsigned int i = 0; i < nf; i ++ )
+			{
+				ret->Strings[i] = SpiderScript_CreateString(
+					sqlite3_column_bytes(info->SQLite.res, i),
+					sqlite3_column_blob (info->SQLite.res, i)
+					);
+				// don't free values from sqlite3_column_*
+			}
+			info->SQLite.rv = sqlite3_step(info->SQLite.res);
+			break;
+		#endif
+		case DBT_NOP:
+			for(unsigned int i = 0; i < nf; i ++ )
+			{
+				ret->Strings[i] = NULL;
+			}
+			break;
+		}
+		info->CurRow ++;
+		@RETURN ret;
+	@}
+
+	@FUNCTION Integer ResultCount ()
+	@{
+		t_result_obj	*info = this->OpaqueData;
+		if( info->nRows == -1 )
+		{
+			if( info->CurRow != 0 )
+				return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC, "ResultCount");
+			int nRows = 0;
+			switch(info->dbinfo->Type)
+			{
+			#if ENABLE_SQLITE
+			case DBT_SQLITE:
+				nRows ++;
+				while( sqlite3_step(info->SQLite.res) == SQLITE_ROW )
+					nRows ++;
+				sqlite3_reset(info->SQLite.res);
+				if( info->bFinalised ) {
+					info->SQLite.rv = sqlite3_step(info->SQLite.res);
+				}
+				break;
+			#endif
+			case DBT_NOP:
+				return 0;
+			}
+			info->nRows = nRows;
+		}
+		@RETURN info->nRows;
+	@}
+	
+	// TODO: Make this an attribute?
+	@FUNCTION String GetQuery ()
+	@{
+		t_result_obj	*info = this->OpaqueData;
+		switch( info->dbinfo->Type )
+		{
+		#if ENABLE_SQLITE
+		case DBT_SQLITE: {
+			const char *str = sqlite3_sql(info->SQLite.res);
+			@RETURN SpiderScript_CreateString(strlen(str), str);
+			break; }
+		#endif
+		case DBT_NOP:
+			@RETURN NULL;
+		}
+		@RETURN NULL;
+	@}
+@}
+
+@}
+
+@}
+
+// vim: ft=c
+

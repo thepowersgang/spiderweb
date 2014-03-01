@@ -26,6 +26,13 @@ typedef struct
 	t_db_obj	*dbinfo;
 } t_result_obj;
 
+void _sw_sqlite_free_string_by_data(void *dataptr)
+{
+	tSpiderString	*str = (void*)((char*)dataptr - offsetof(tSpiderString,Data));
+	
+	SpiderScript_DereferenceString(str);
+}
+
 @CLASS SQLite
 @{
 	@CONSTRUCTOR (String Path)
@@ -65,40 +72,100 @@ typedef struct
 		@RETURN sqlite3_last_insert_rowid(info->Handle);
 	@}
 
-	@FUNCTION SpiderWeb.SQLite.Result Query(String QueryString)
+	@FUNCTION SpiderWeb.SQLite.Result PrepQuery(String QueryString, ...)
 	@{
 		t_db_obj	*info = this->OpaqueData;
 		 int	rv;
-		sqlite3_stmt	*stmt;
-		
-		rv = sqlite3_prepare_v2(info->Handle, QueryString->Data, QueryString->Length, &stmt, NULL);
-		if( rv ) {
-			// Some sort of error
-			// TODO: Exception
-			@RETURN NULL;
-		}
-		
+
 		tSpiderObject *ret;
 		rv = SpiderScript_CreateObject_Type(Script, @TYPECODE(SpiderWeb.SQLite.Result).Def,
 			&ret, 0, NULL, NULL, NULL);
 		if( rv < 0 ) {
 			// Can't construct?
-			// TODO: Exception?
 			return SpiderScript_ThrowException(Script, SS_EXCEPTION_BUG,
 				"SpiderWeb.SQLite->Query Error creating result");
 		}
 		t_result_obj	*ret_info = ret->OpaqueData;
+		ret_info->dbinfo = info;
+		
+		// - Create prepared statement
+		rv = sqlite3_prepare_v2(info->Handle, QueryString->Data, QueryString->Length, &ret_info->res, NULL);
+		if( rv ) {
+			// Some sort of error
+			SpiderScript_DereferenceObject(ret);
+			@RETURN NULL;
+			// TODO: Until exceptions are supported
+			//return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+			//	"Failed creation of SQLite statement %s", sqlite3_errmsg(info->Handle));
+		}
+	
+		 int	idx = 1;
+		for( int i = 0; i < VArgC; i ++ )
+		{
+			tSpiderTypeRef	type = @TYPEOF([i]);
+			if( SS_GETARRAYDEPTH( type ) ) {
+			}
+			//else if( SS_ISTYPEOBJECT( type ) )
+			//{
+			//	tSpiderObject	*obj = @OBJECT( [i] );
+			//	rv = 
+			//}
+			else if( SS_ISCORETYPE(type, SS_DATATYPE_INTEGER) )
+			{
+				tSpiderInteger	val = @INTEGER( [i] );
+				rv = sqlite3_bind_int64(ret_info->res, idx, val);
+			}
+			else if( SS_ISCORETYPE(type, SS_DATATYPE_STRING) )
+			{
+				const tSpiderString	*val = @STRING( [i] );
+				SpiderScript_ReferenceString( val );
+				rv = sqlite3_bind_text(ret_info->res, idx, val->Data, val->Length, _sw_sqlite_free_string_by_data);
+			}
+			else
+			{
+				SpiderScript_DereferenceObject(ret);
+				return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+					"Unhandled parameter type '%s'",
+					SpiderScript_GetTypeName(Script, type));
+			}
+			if( rv != SQLITE_OK ) {
+				// Oh...
+				SpiderScript_DereferenceObject(ret);
+				return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+					"sqlite error %s", sqlite3_errmsg(info->Handle));
+			}
+			idx ++;
+		}
+	
+		@RETURN ret;
+	@}
+	
+	@FUNCTION SpiderWeb.SQLite.Result Query(String QueryString, ...)
+	@{
+		t_db_obj	*info = this->OpaqueData;
+		 int	rv;
+		tSpiderObject	*ret;
+		
+		// 1. Prepare a query
+		tSpiderTypeRef	ret_type;
+		rv = SpiderScript_ExecuteMethod(Script, "PrepQuery", &ret_type, &ret,
+			NArgs, ArgTypes, Args, NULL);
+		t_result_obj	*ret_info = ret->OpaqueData;
+		if( !SS_TYPESEQUAL(ret_type, @TYPE(SpiderWeb.SQLite.Result)) ) {
+			SpiderScript_DereferenceObject(ret);
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_BUG,
+				"SQLite->PrepQuery returned something other than SpiderWeb.SQLite.Result");
+		}
 
-		ret_info->res = stmt;
-		ret_info->nRows = -1;
+		// 2. Execute a single step
 		ret_info->rv = sqlite3_step(ret_info->res);
 		if( ret_info->rv == SQLITE_DONE )
 			ret_info->nRows = sqlite3_changes(info->Handle);
 		else if( ret_info->rv != SQLITE_ROW ) {
 			SpiderScript_DereferenceObject(ret);
 			return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
-				"SpiderWeb.SQLite->Query error: 0x%x %s %s", ret_info->rv, sqlite3_errstr(ret_info->rv),
-					strerror(errno));
+				"SpiderWeb.SQLite->Query error: 0x%x '%s' '%s'",
+				ret_info->rv, sqlite3_errmsg(info->Handle), strerror(errno));
 		}
 		
 		@RETURN ret;
@@ -144,6 +211,76 @@ typedef struct
 			sqlite3_finalize(info->res);
 	@}
 	
+	@FUNCTION void Bind( Integer Index, * Value)
+	@{
+		t_result_obj	*info = this->OpaqueData;
+		 int	idx = Index;
+
+		// TODO: Ensure that query hasn't been executed
+		if( info->rv != 0 ) {
+			// A step has been perormed, no more binding possible
+		}
+
+		// Bind value
+		tSpiderTypeRef	type = @TYPEOF(Value);
+		if( SS_GETARRAYDEPTH( type ) )
+			;
+		else if( SS_ISTYPEOBJECT( type ) )
+		{
+			//tSpiderString	*strval = @OBJECT( [i] );
+		}
+		else if( SS_ISCORETYPE(type, SS_DATATYPE_INTEGER) )
+		{
+			tSpiderInteger	val = @INTEGER(Value);
+			sqlite3_bind_int64(info->res, idx, val);
+		}
+		else if( SS_ISCORETYPE(type, SS_DATATYPE_STRING) )
+		{
+			const tSpiderString	*val = @STRING(Value);
+			SpiderScript_ReferenceString( val );
+			sqlite3_bind_text(info->res, idx, val->Data, val->Length, _sw_sqlite_free_string_by_data);
+		}
+		else
+		{
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+				"Unhandled parameter type '%s'",
+				SpiderScript_GetTypeName(Script, type));
+		}
+	@}
+
+	@FUNCTION Boolean Run ()
+	@{
+		t_result_obj	*info = this->OpaqueData;
+		__SS_BUGCHECK(info->res);
+	
+		if( info->rv != 0 )
+			SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+				"Called ->Run on active query"
+				);	// TODO: Exception
+		
+		// Query has not yet been run
+		info->rv = sqlite3_step(info->res);
+		if( info->rv == SQLITE_DONE || info->rv == SQLITE_ROW ) {
+			@RETURN 1;
+		}
+		else {
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+				"SpiderWeb.SQLite->Query error: 0x%x '%s' '%s'",
+				info->rv, sqlite3_errmsg(info->dbinfo->Handle), strerror(errno));
+			// Fall through
+			@RETURN 0;
+		}
+	@}
+
+	// TODO: Make this an attribute?
+	@FUNCTION String GetQuery ()
+	@{
+		t_result_obj	*info = this->OpaqueData;
+		__SS_BUGCHECK(info->res);
+		const char *str = sqlite3_sql(info->res);
+		@RETURN SpiderScript_CreateString(strlen(str), str);
+	@}
+	
 	@FUNCTION Integer ResultCount ()
 	@{
 		t_result_obj	*info = this->OpaqueData;
@@ -164,7 +301,10 @@ typedef struct
 	@{
 		t_result_obj	*info = this->OpaqueData;
 		if(!info->res)	@RETURN NULL;
-		
+	
+		if( info->rv == 0 )
+			@RETURN NULL;
+	
 		if( info->rv != SQLITE_ROW )
 		{
 			if( info->rv == SQLITE_DONE )
@@ -177,7 +317,8 @@ typedef struct
 		int nf = sqlite3_column_count(info->res);
 		
 		tSpiderArray *ret = SpiderScript_CreateArray(@TYPECODE(String), nf);
-		if( !ret )	@RETURN NULL;
+		if( !ret )	return SpiderScript_ThrowException(Script, SS_EXCEPTION_MEMORY,
+			"SpiderWeb.SQLite.Result->GetNextRow - String[%i]", nf);
 		
 		for(int i = 0; i < nf; i ++ )
 		{
