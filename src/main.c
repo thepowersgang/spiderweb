@@ -36,6 +36,7 @@ tSpiderVariant	gScriptVariant = {
 char	*gsScriptFile;
 char	*gsCacheFile;
  int	gbCacheCompiled = 1;
+enum eSpiderScript_TraceLevel	gTraceLevel = SS_TRACE_NONE;
 
 // === CODE ===
 /**
@@ -100,6 +101,9 @@ int main(int argc, char *argv[], char **envp)
 		}
 	}
 
+	// Apply tracing level
+	SpiderScript_SetTraceLevel(script, gTraceLevel);
+
 	// Execute
 	tSpiderTypeRef	rettype;
 	tSpiderInteger	ret;
@@ -155,6 +159,9 @@ int ParseArguments(int argc, char *argv[])
 			}
 			else if( strcmp(arg, "--no-cache") == 0 ) {
 				gbCacheCompiled = 0;
+			}
+			else if( strcmp(arg, "--trace-bc") == 0 ) {
+				gTraceLevel = SS_TRACE_OPCODES;
 			}
 			else {
 				// *shrug*
