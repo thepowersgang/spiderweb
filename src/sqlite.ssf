@@ -150,6 +150,7 @@ void _sw_sqlite_free_string_by_data(void *dataptr)
 		tSpiderTypeRef	ret_type;
 		rv = SpiderScript_ExecuteMethod(Script, "PrepQuery", &ret_type, &ret,
 			NArgs, ArgTypes, Args, NULL);
+		if(rv)	return rv;
 		t_result_obj	*ret_info = ret->OpaqueData;
 		if( !SS_TYPESEQUAL(ret_type, @TYPE(SpiderWeb.SQLite.Result)) ) {
 			SpiderScript_DereferenceObject(ret);
