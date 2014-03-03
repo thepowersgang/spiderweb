@@ -178,7 +178,7 @@ const char	*gsCGI_SessionDir = "/tmp/spiderweb/sessions";
 	}
 	static void session_makehash(char *dest, size_t length)
 	{
-		const char pool[] = "abcdefghijklmnopqrstuvwxyz0123456789";
+		static const char pool[] = "abcdefghijklmnopqrstuvwxyz0123456789";
 		for(; length--; dest++)
 		{
 			*dest = pool[rand()%sizeof(pool)];

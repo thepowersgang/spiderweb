@@ -164,9 +164,9 @@ int CGI_int_ParseQueryString(const char *Source, char *DestBuffer, int *ParamCou
 			len += Params[idx].DataLen + 1;
 			DestBuffer[len-1] = '\0';	// NULL terminate as UnURLEncode doesn't do that
 			
-//			printf("Param %i '%s' = %i bytes '%.*s'<br/>\n",
-//				idx, Params[idx].Name,
-//				Params[idx].DataLen, Params[idx].DataLen, Params[idx].Data);
+			//printf("Param %i '%s' = %i bytes '%.*s'<br/>\n",
+			//	idx, Params[idx].Name,
+			//	Params[idx].DataLen, Params[idx].DataLen, Params[idx].Data);
 		}
 		else
 		{
@@ -222,6 +222,8 @@ void CGI_ParsePOSTData(void)
 	gsCGI_POSTData = malloc(datalen);
 	gaCGI_POSTArgs = malloc( sizeof(*gaCGI_POSTArgs) * giCGI_POSTNArgs );
 	CGI_int_ParseQueryString(query, gsCGI_POSTData, &giCGI_POSTNArgs, gaCGI_POSTArgs);
+	
+	free(query);
 }
 
 static inline int _ParseCookieString(const char *base, char *dataptr, int *count, tCGI_Param *dest)
