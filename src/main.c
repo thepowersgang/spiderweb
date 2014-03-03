@@ -120,6 +120,9 @@ int main(int argc, char *argv[], char **envp)
 		case SS_EXCEPTION_NONE:
 			printf("BUG - _ExecuteFunction returned <0, but no exception\n");
 			break;
+		case SS_EXCEPTION_FORCEEXIT:
+			// Script forced an exit, not an error
+			break;
 		default:
 			printf("Unknown Exception %i: %s\n", rv, msg);
 			break;
