@@ -132,6 +132,10 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 				fputs(ptr, stdout);
 			}
 		}
+		else
+		{
+			//fputs("UNSET", stdout);
+		}
 		return 0;
 	
 	case TPLOP_CONSTANT:

@@ -33,9 +33,10 @@ tSpiderVariant	gScriptVariant = {
 	0, {},	// Global (namespaceless) Constants
 };
 
+const char	*gsEOL = "<br/>\n";
 char	*gsScriptFile;
 char	*gsCacheFile;
- int	gbCacheCompiled = 1;
+ int	gbCacheCompiled = 0;
 enum eSpiderScript_TraceLevel	gTraceLevel = SS_TRACE_NONE;
 
 // === CODE ===
@@ -118,14 +119,24 @@ int main(int argc, char *argv[], char **envp)
 		switch( (rv = SpiderScript_GetException(script, &msg)) )
 		{
 		case SS_EXCEPTION_NONE:
-			printf("BUG - _ExecuteFunction returned <0, but no exception\n");
+			printf("BUG - _ExecuteFunction returned <0, but no exception%s",gsEOL);
 			break;
 		case SS_EXCEPTION_FORCEEXIT:
 			// Script forced an exit, not an error
 			break;
 		default:
-			printf("Unknown Exception %i: %s\n", rv, msg);
+			printf("Unknown Exception %i: %s%s", rv, msg, gsEOL);
 			break;
+		}
+		if( rv != SS_EXCEPTION_FORCEEXIT )
+		{
+			 int	n_bt;
+			const tSpiderBacktrace *bt = SpiderScript_GetBacktrace(script, &n_bt);
+			for(int i = 0; i < n_bt; i ++ ) {
+				printf("#%i: %s+%zi %s:%i%s",
+					i, bt[i].Function, bt[i].Offset, bt[i].File, bt[i].Line,
+					gsEOL);
+			}
 		}
 		SpiderScript_ClearException(script);
 	}
@@ -138,6 +149,18 @@ int main(int argc, char *argv[], char **envp)
 	}
 	
 	return 0;
+}
+
+void PrintUsage(const char *progname)
+{
+	fprintf(stderr, "Usage: %s [<opts>] <file>\n", progname);
+	fprintf(stderr,
+		"Options:\n"
+		"--[no-]cache : (En/Dis)able caching of bytecode. (Currently %sabled)\n"
+		"--trace-bc   : Trace bytecode execution to stdout\n"
+		,
+		(gbCacheCompiled ? "en" : "dis")
+		);
 }
 
 int ParseArguments(int argc, char *argv[])
@@ -153,6 +176,9 @@ int ParseArguments(int argc, char *argv[])
 		else if( arg[1] != '-' )
 		{
 			// Short arguments
+			fprintf(stderr, "Unknown option -%s\n", arg+1);
+			PrintUsage(argv[0]);
+			return 1;
 		}
 		else
 		{
@@ -168,6 +194,9 @@ int ParseArguments(int argc, char *argv[])
 			}
 			else {
 				// *shrug*
+				fprintf(stderr, "Unknown option %s\n", arg);
+				PrintUsage(argv[0]);
+				return 1;
 			}
 		}
 	}
