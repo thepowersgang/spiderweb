@@ -32,7 +32,7 @@ EXPORT_FILES := $(EXPORT_FILES:%.gen.o=%.ssf)
 OBJ += $(patsubst %.c,%.o,.exports/_index.c $(EXPORT_FILES:%.ssf=.exports/%.c))
 OBJ := $(addprefix $(OBJDIR),$(OBJ))
 OBJ := $(OBJ:%=obj/%)
-DEPFILES=$(OBJ:%=%.dep)
+DEPFILES := $(OBJ:%.o=%.d)
 
 GENSFCNS := ../libspiderscript/tools/gen_scriptfcns.pl
 
@@ -63,8 +63,7 @@ types.gen.h: $(EXPORT_FILES) $(GENSFCNS)
 
 obj/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ -c $<
-	@$(CC) $(CPPFLAGS) -M -MF $@.dep $<
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ -c $< -MMD -MP
 
 -include $(DEPFILES)
 

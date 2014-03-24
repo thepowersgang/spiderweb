@@ -7,6 +7,7 @@
  */
 #include "template_common.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 // === PROTOTYPES ===
@@ -68,7 +69,7 @@ int Template_int_RunSec_Arith(t_obj_Template *State, struct s_tplop_arith *Arith
 		}
 		return ent->Type;
 	default:
-		printf("Template Error: Unimplimented BinOp %i\n", Arith->Operation);
+		fprintf(stderr, "Template Error: Unimplimented BinOp %i\n", Arith->Operation);
 		break;
 	}
 	return 0;
@@ -141,6 +142,48 @@ int Template_int_RunSec(t_obj_Template *State, t_tplop *Section, void **ValuePtr
 	case TPLOP_CONSTANT:
 		*ValuePtr = Section->Constant.Data;
 		return MAPENT_STRING;
+	case TPLOP_CALLMACRO: {
+		t_tplop_callmacro	*call = &Section->Call;
+		// Create a new state
+		t_obj_Template	substate = {0};
+		t_tplmacro_param	*param = call->Macro->Params;
+		t_tplop	*op;
+		for( op = call->Args; op && param; op = op->Next )
+		{
+			t_map_entry	*ent = Template_int_AddMapItem_SubMap(&substate.LocalValues, param->Name);
+			switch( Template_int_RunSec(State, op, &ptr) )
+			{
+			case MAPENT_VECTOR:
+				ent->Type = MAPENT_VECTOR;
+				ent->SubMap = *(t_map*)ptr;
+				break;
+			case MAPENT_STRING:
+				//printf("%s = '%s'\n", param->Name, (char*)ptr);
+				ent->Type = MAPENT_STRING;
+				ent->String = ptr;
+				break;
+			case MAPENT_POINTER:
+				ent->Type = MAPENT_POINTER;
+				ent->Ptr = ptr;
+				break;
+			}
+			param = param->Next;
+		}
+		if( op || param ) {
+			// Oh... oops?
+		}
+		for( op = call->Macro->Sections; op; op = op->Next )
+		{
+			Template_int_RunSec(&substate, op, &ptr);
+		}
+		// Clean up
+		for( t_map_entry *ent = substate.LocalValues.FirstEnt, *next; ent; ent = next )
+		{
+			next = ent->Next;
+			free(ent);
+		}
+		substate.LocalValues.FirstEnt = NULL;
+		return 0; }
 	case TPLOP_GETVALUE:
 //		printf("GetValue '%s'\n", Section->Value.Name);
 		val = Template_int_GetMapItem(&State->IteratorValues, Section->Value.Name);

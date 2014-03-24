@@ -10,6 +10,8 @@
 
 #include <stddef.h>
 
+#define NEW(type, extra)	((type*)calloc(1,sizeof(type)extra))
+
 typedef struct s_map_entry	t_map_entry;
 typedef struct s_map	t_map;
 typedef struct s_filter	t_filter;
@@ -69,6 +71,7 @@ enum e_tplop_types
 	TPLOP_ITERATOR,
 	TPLOP_CONDITIONAL,
 	TPLOP_ASSIGN,
+	TPLOP_CALLMACRO,
 	
 	TPLOP_CONSTANT,
 	TPLOP_GETVALUE,
@@ -101,6 +104,7 @@ typedef struct s_tplop_assign	t_tplop_assign;
 typedef struct s_tplop_iter	t_tplop_iter;
 typedef struct s_tplop_cond	t_tplop_cond;
 typedef struct s_tplop_arith	t_tplop_arith;
+typedef struct s_tplop_callmacro	t_tplop_callmacro;
 typedef struct s_template	t_template;
 
 #define S_TPLSEC_HDR	t_tplop *Next; enum e_tplop_types Type;
@@ -163,6 +167,13 @@ struct s_tplop_arith
 	union u_tplop	*Right;
 };
 
+struct s_tplop_callmacro
+{
+	S_TPLSEC_HDR
+	union u_tplop	*Args;
+	struct s_tplmacro	*Macro;
+};
+
 union u_tplop
 {
 	struct {
@@ -175,11 +186,31 @@ union u_tplop
 	struct s_tplop_iter	Iterator;
 	struct s_tplop_cond	Conditional;
 	struct s_tplop_arith	Arith;
+	struct s_tplop_callmacro	Call;
+};
+
+typedef struct s_tplmacro	t_tplmacro;
+typedef struct s_tplmacro_param	t_tplmacro_param;
+
+struct s_tplmacro_param
+{
+	t_tplmacro_param	*Next;
+	char	Name[];
+};
+
+struct s_tplmacro
+{
+	t_tplmacro	*Next;
+	t_tplop	*Sections;
+	t_tplmacro_param	*Params;
+	t_tplmacro_param	*Params_End;
+	char	Name[];
 };
 
 struct s_template
 {
 	t_tplop	*Sections;
+	t_tplmacro	*Macros;
 };
 
 
@@ -192,6 +223,7 @@ extern t_map_entry	*Template_int_AddMapItem_String(t_map *Map, const char *Key, 
 //extern t_map_entry	*TemplatE_int_AddMapItem_Integer(t_map *Map, const char *Key, int Value);
 extern void	Template_int_FreeMap(t_map *Map);
 
+extern void	Template_int_FreeSec(t_tplop *Section);
 extern void	Template_int_Unload(t_template *Template);
 extern t_template	*Template_int_Load(const char *Filename);
 extern void	Template_int_Output(t_obj_Template *State, t_template *Template);

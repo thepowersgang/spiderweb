@@ -12,6 +12,7 @@
 #include <setjmp.h>	// used for error handling
 #include <assert.h>
 #include <ctype.h>
+#include <stdbool.h>
 
 typedef struct sParser
 {
@@ -35,6 +36,7 @@ enum eTokens
 	TOK_STRING,	TOK_INTEGER,
 
 	TOK_QUESTION,	TOK_COLON,
+	TOK_COMMA,
 
 	TOK_FIELD,
 	TOK_SQUARE_O,	TOK_SQUARE_C,
@@ -46,6 +48,8 @@ enum eTokens
 	TOK_CMPEQ, TOK_CMPNE,
 	TOK_CMPLE, TOK_CMPLT,
 	TOK_CMPGE, TOK_CMPGT,
+	
+	TOK_SLASH,
 	
 	TOK_PIPE
 };
@@ -103,6 +107,9 @@ int Template_int_GetToken(tParser *Parser)
 	case '|':
 		rv = TOK_PIPE;
 		break;
+	case '/':
+		rv = TOK_SLASH;
+		break;
 	case '$':	// Variable
 		while( issymchar(Parser->CurState.Pos[len]) )
 			len ++;
@@ -155,6 +162,12 @@ int Template_int_GetToken(tParser *Parser)
 	case ':':	rv = TOK_COLON; 	break;
 	
 	case '.':	rv = TOK_FIELD;	break;
+	case ',':	rv = TOK_COMMA;	break;
+	
+	case '[':	rv = TOK_SQUARE_O;	break;
+	case ']':	rv = TOK_SQUARE_C;	break;
+	case '(':	rv = TOK_PAREN_O;	break;
+	case ')':	rv = TOK_PAREN_C;	break;
 
 	case 'A'...'Z':
 	case 'a'...'z':
@@ -179,6 +192,21 @@ int Template_int_GetToken(tParser *Parser)
 	return rv;
 }
 
+int _SyntaxAssertTok(tParser *Parser, bool DoGetToken, enum eTokens Expected)
+{
+	if( DoGetToken )
+		Template_int_GetToken(Parser);
+	if( Parser->CurState.Token != Expected ) {
+		fprintf(stderr, "ERROR: Expected token %i, got %i\n", Expected, Parser->CurState.Token);
+		return 1;
+	}
+	return 0;
+}
+#define _SyntaxAssert(Parser, cnd)	((cnd) && _SyntaxAssertFail(Parser, #cnd))
+int _SyntaxAssertFail(tParser *Parser, const char *cnd) {
+	return 1;
+}
+
 void Template_int_AppendOp(t_tplop **List, t_tplop *Ent)
 {
 	t_tplop	*prev;
@@ -187,11 +215,9 @@ void Template_int_AppendOp(t_tplop **List, t_tplop *Ent)
 	for( prev = *List; prev && prev->Next; prev = prev->Next )
 		;
 	if(prev) {
-//		printf("Placed %p at end of %p (prev=%p)\n", Ent, List, prev);
 		prev->Next = Ent;
 	}
 	else {
-//		printf("Placed %p as only in %p\n", Ent, List);
 		*List = Ent;
 	}
 	
@@ -234,6 +260,21 @@ int Template_int_AddModifier(t_tplop *Op, const char *ModName, size_t ModNameLen
 	else
 		out->Filters = new;
 
+	return 0;
+}
+
+int Template_int_ParseModifier(tParser *Parser, t_tplop *Op)
+{
+	if( _SyntaxAssertTok(Parser, true, TOK_IDENT) )
+		return 1;
+	if( Template_int_GetToken(Parser) == TOK_PAREN_O )
+	{
+		// TODO: Arguments to modifiers
+		
+	}
+	Template_int_PutBack(Parser);
+	
+	Template_int_AddModifier(Op, Parser->CurState.TokenStr, Parser->CurState.TokenLen);
 	return 0;
 }
 
@@ -289,7 +330,10 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 				break;
 			case TOK_SQUARE_O:
 				vop = _BinOp(ARITHOP_INDEX, vop, DoExpr0());
-				assert(Template_int_GetToken(Parser) == TOK_SQUARE_C);
+				if(vop && _SyntaxAssertTok(Parser, true, TOK_SQUARE_C)) {
+					Template_int_FreeSec(vop);
+					return NULL;
+				}
 				break;
 			default:
 				Template_int_PutBack(Parser);
@@ -297,7 +341,7 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 			}
 		}
 	}
-
+	
 	t_tplop *DoExprV(int bIdentAsString)
 	{
 		switch( Template_int_GetToken(Parser) )
@@ -325,9 +369,11 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 	{
 		if( Template_int_GetToken(Parser) == TOK_PAREN_O )
 		{
-			t_tplop *rv;
-			rv = DoExpr0();
-			assert(Template_int_GetToken(Parser) == TOK_PAREN_C);
+			t_tplop *rv = DoExpr0();
+			if( rv && _SyntaxAssertTok(Parser, true, TOK_PAREN_C) ) {
+				Template_int_FreeSec(rv);
+				return NULL;
+			}
 			return rv;
 		}
 		else {
@@ -395,6 +441,7 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 #define MAX_INCLUDE_DEPTH	5
 typedef struct s_parsestate
 {
+	t_template	*Tpl;
 	 int	FStackPos;
 	struct {
 		char	*Filename;
@@ -429,26 +476,32 @@ t_tplop **Template_int_ParseStatement(t_parserstate *State, const char *Filename
 	{
 		t_tplop_cond	*cond;
 			
-		cond = malloc( sizeof(*cond) );
+		cond = calloc( sizeof(*cond), 1 );
 		cond->Type = TPLOP_CONDITIONAL;
-		cond->Next = NULL;
 
-		assert( Template_int_GetToken(Parser) == TOK_QUESTION );
+		if( _SyntaxAssertTok(Parser, true, TOK_QUESTION) )
+			goto _ternary_err;
 	
 		cond->Condition = Template_int_ParseExpr(Parser);
-		assert( Template_int_GetToken(Parser) == TOK_QUESTION );
+		if( _SyntaxAssertTok(Parser, true, TOK_QUESTION) )
+			goto _ternary_err;
 		
 		cond->True = Template_int_NewOutput(Template_int_ParseExpr(&parser_state));
-		assert( Template_int_GetToken(Parser) == TOK_COLON );
+		if( _SyntaxAssertTok(Parser, true, TOK_COLON) )
+			goto _ternary_err;
 		
 		cond->False = Template_int_NewOutput(Template_int_ParseExpr(&parser_state));		
-		assert( Template_int_GetToken(Parser) == TOK_EOF );
+		if( _SyntaxAssertTok(Parser, true, TOK_EOF) )
+			goto _ternary_err;
 	
 		Template_int_AppendOp(State->CurList, (t_tplop*)cond);
 		return State->CurList;
+	_ternary_err:
+		Template_int_FreeSec( (t_tplop*)cond );
+		return NULL;
 	}
 
-	switch( Template_int_GetToken(&parser_state) )
+	switch( Template_int_GetToken(Parser) )
 	{
 	#define CMPTOK(str)	(parser_state.CurState.TokenLen == sizeof(str)-1 && strncmp(parser_state.CurState.TokenStr, str, parser_state.CurState.TokenLen) == 0)
 	case TOK_IDENT:
@@ -459,7 +512,9 @@ t_tplop **Template_int_ParseStatement(t_parserstate *State, const char *Filename
 				return NULL;
 			}
 			// Get the filename
-			assert( Template_int_GetToken(Parser) == TOK_STRING );
+			if( _SyntaxAssertTok(Parser, true, TOK_STRING) ) {
+				return NULL;
+			}
 			const char	*fname_raw = Parser->CurState.TokenStr + 1;
 			 int	fname_raw_len = Parser->CurState.TokenLen - 2;
 			
@@ -638,6 +693,62 @@ t_tplop **Template_int_ParseStatement(t_parserstate *State, const char *Filename
 			State->BStackPos --;
 			return State->BStack[State->BStackPos].List;
 		}
+		else if( CMPTOK("def") )
+		{
+			if(State->BStackPos == MAX_BLOCK_DEPTH) {
+				fprintf(stderr, "Maximum block depth exceeded\n");
+				return NULL;
+			}
+			
+			// Ident
+			if( _SyntaxAssertTok(Parser, true, TOK_IDENT) ) {
+				return NULL;
+			}
+			
+			t_tplmacro	*macro = NEW(t_tplmacro, + Parser->CurState.TokenLen+1);
+			memcpy(macro->Name, Parser->CurState.TokenStr, Parser->CurState.TokenLen);
+			macro->Name[Parser->CurState.TokenLen] = '\0';
+			macro->Params_End = (void*)&macro->Params;
+			
+			// variable number of arguments (variable tokens)
+			while( Template_int_GetToken(Parser) == TOK_VARIABLE )
+			{
+				t_tplmacro_param *param = NEW(t_tplmacro_param, + Parser->CurState.TokenLen-1 + 1);
+				memcpy(param->Name, Parser->CurState.TokenStr+1, Parser->CurState.TokenLen-1);
+				param->Name[Parser->CurState.TokenLen] = '\0';
+				macro->Params_End->Next = param;
+				macro->Params_End = param;
+			}
+			
+			if( _SyntaxAssertTok(Parser, false, TOK_EOF) ) {
+				// TODO: Free entire macro
+				return NULL;
+			}
+			
+			// TODO: Move until after close
+			macro->Next = State->Tpl->Macros;
+			State->Tpl->Macros = macro;
+			
+			// Save state and switch
+			State->BStack[State->BStackPos].Op = NULL;
+			State->BStack[State->BStackPos].List = State->CurList;
+			State->BStackPos ++;
+			return &macro->Sections;
+		}
+		else if( CMPTOK("enddef") )
+		{
+			if(State->BStackPos == 0) {
+				fprintf(stderr, "{endforeach} with no matching {foreach}\n");
+				return NULL;
+			}
+			
+			if( State->BStack[State->BStackPos-1].Op != NULL ) {
+				fprintf(stderr, "{enddef} terminates non {def} block\n");
+				return NULL;
+			}
+			State->BStackPos --;
+			return State->BStack[State->BStackPos].List;
+		}
 		else if( CMPTOK("assign") )
 		{
 			assert( Template_int_GetToken(Parser) == TOK_VARIABLE );
@@ -655,19 +766,69 @@ t_tplop **Template_int_ParseStatement(t_parserstate *State, const char *Filename
 			assign->Value = Template_int_ParseExpr(Parser);
 			Template_int_AppendOp(State->CurList, (t_tplop*)assign);
 		}
+		else if( CMPTOK("exec") )
+		{
+			if( _SyntaxAssertTok(Parser, true, TOK_IDENT) ) {
+				return NULL;
+			}
+			
+			t_tplop_callmacro *call = NEW(t_tplop_callmacro,);
+			call->Type = TPLOP_CALLMACRO;
+			char name[Parser->CurState.TokenLen+1];
+			memcpy(name, Parser->CurState.TokenStr, Parser->CurState.TokenLen);
+			name[Parser->CurState.TokenLen] = 0;
+			
+			for( t_tplmacro *macro = State->Tpl->Macros; macro; macro = macro->Next )
+			{
+				if( strcmp(macro->Name, name) == 0 ) {
+					call->Macro = macro;
+					break;
+				}
+			}
+			if( !call->Macro ) {
+				free(call);
+				fprintf(stderr, "No macro named %s\n", name);
+				return NULL;
+			}
+			
+			while( Template_int_GetToken(Parser) != TOK_EOF )
+			{
+				Template_int_PutBack(Parser);
+				t_tplop	*op = Template_int_ParseExpr(Parser);
+				if(!op) {
+					Template_int_FreeSec( (t_tplop*)call );
+					return NULL;
+				}
+				Template_int_AppendOp(&call->Args, op);
+			}
+			Template_int_AppendOp(State->CurList, (t_tplop*)call);
+		}
 		else {
 	default:
 			Template_int_PutBack(&parser_state);
 			t_tplop	*op = Template_int_NewOutput( Template_int_ParseExpr(&parser_state) );
+			// Modifiers
 			while( Template_int_GetToken(Parser) == TOK_PIPE )
 			{
-				assert( Template_int_GetToken(Parser) == TOK_IDENT );
-				// Apply modifiers
-				Template_int_AddModifier(op, Parser->CurState.TokenStr, Parser->CurState.TokenLen);
+				if( Template_int_ParseModifier(Parser, op) ) {
+					Template_int_FreeSec(op);
+					return NULL;
+				}
 			}
 			Template_int_PutBack(Parser);
 			// Output stuff
 			Template_int_AppendOp(State->CurList, op);
+		}
+		break;
+	case TOK_SLASH:
+		if( Template_int_GetToken(Parser) != TOK_IDENT ) {
+			fprintf(stderr, "Expected identifier after '/'\n");
+			return NULL;
+		}
+		if( CMPTOK("foreach") ) {
+		}
+		else {
+			// Dunno
 		}
 		break;
 	#undef CMPTOK
@@ -712,8 +873,8 @@ t_template *Template_int_Load(const char *Filename)
 		return NULL;
 	}
 
-	t_template *ret = malloc( sizeof(t_template) );
-	ret->Sections = NULL;
+	t_template *ret = calloc( sizeof(t_template), 1 );
+	state.Tpl = ret;
 	state.CurList = &ret->Sections;
 
 	size_t ofs = 0;

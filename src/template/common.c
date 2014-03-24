@@ -146,19 +146,19 @@ t_map_entry *Template_int_DuplicateMapItem(t_map *Map, const char *Key, int Type
 }
 
 // --- Template Parsing ---
+void Template_int_FreeSecChain(t_tplop *First)
+{
+	t_tplop	*sub, *next;
+	for( sub = First; sub; sub = next ) {
+		next = sub->Next;
+		Template_int_FreeSec(sub);
+	}
+}
+
 void Template_int_FreeSec(t_tplop *Section)
 {
 	if(!Section)
 		return ;
-
-	void _freelist(t_tplop *First)
-	{
-		t_tplop	*sub, *next;
-		for( sub = First; sub; sub = next ) {
-			next = sub->Next;
-			Template_int_FreeSec(sub);
-		}
-	}	
 
 	switch(Section->Type)
 	{
@@ -176,15 +176,18 @@ void Template_int_FreeSec(t_tplop *Section)
 		}
 		break;
 	
+	case TPLOP_CALLMACRO:
+		Template_int_FreeSecChain( Section->Call.Args );
+		break;
 	case TPLOP_CONDITIONAL:
 		Template_int_FreeSec(Section->Conditional.Condition);
-		_freelist(Section->Conditional.True);
-		_freelist(Section->Conditional.False);
+		Template_int_FreeSecChain(Section->Conditional.True);
+		Template_int_FreeSecChain(Section->Conditional.False);
 		break;
 	case TPLOP_ITERATOR:
 		Template_int_FreeSec(Section->Iterator.Array);
-		_freelist(Section->Iterator.PerItem);
-		_freelist(Section->Iterator.IfEmpty);
+		Template_int_FreeSecChain(Section->Iterator.PerItem);
+		Template_int_FreeSecChain(Section->Iterator.IfEmpty);
 		break;
 	case TPLOP_ARITH:
 		Template_int_FreeSec(Section->Arith.Left);
@@ -199,12 +202,18 @@ void Template_int_FreeSec(t_tplop *Section)
 
 void Template_int_Unload(t_template *Template)
 {
-	t_tplop *section, *next;
+	Template_int_FreeSecChain( Template->Sections );
 	
-	for( section = Template->Sections; section; section = next )
+	for( t_tplmacro *macro = Template->Macros, *next; macro; macro = next )
 	{
-		next = section->Next;
-		Template_int_FreeSec(section);
+		next = macro->Next;
+		Template_int_FreeSecChain( macro->Sections );
+		for( t_tplmacro_param *param = macro->Params, *pnext; param; param = pnext )
+		{
+			pnext = param->Next;
+			free(param);
+		}
+		free(macro);
 	}
 	free(Template);
 }
