@@ -45,6 +45,7 @@ enum eTokens
 
 	TOK_NOT,
 	TOK_AND, TOK_OR,
+	TOK_ADD,
 	TOK_CMPEQ, TOK_CMPNE,
 	TOK_CMPLE, TOK_CMPLT,
 	TOK_CMPGE, TOK_CMPGT,
@@ -110,6 +111,9 @@ int Template_int_GetToken(tParser *Parser)
 	case '/':
 		rv = TOK_SLASH;
 		break;
+	//case '+':
+	//	rv = TOK_ADD;
+	//	break;
 	case '$':	// Variable
 		while( issymchar(Parser->CurState.Pos[len]) )
 			len ++;
@@ -291,10 +295,10 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 		return (t_tplop*)ret;
 	}
 
-	t_tplop *_String(const char *String, int Length)
+	t_tplop *_String(const char *String, size_t Length)
 	{
-		t_tplop_const	*ret;
-		ret = malloc( sizeof(*ret) + Length + 1 );
+		t_tplop_const	*ret = NEW(t_tplop_const, + Length + 1 );
+		assert(ret);
 		ret->Type = TPLOP_CONSTANT;
 		ret->Next = NULL;
 		ret->Length = Length;
@@ -350,6 +354,7 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 			return DoExprVar();
 		case TOK_INTEGER:
 			//return _Integer(Parser->CurState.TokenStr);
+			return _String(Parser->CurState.TokenStr, Parser->CurState.TokenLen);
 		case TOK_STRING:
 			return _String(Parser->CurState.TokenStr+1, Parser->CurState.TokenLen-2);
 		case TOK_IDENT:
@@ -405,6 +410,7 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 			{
 			case TOK_AND:	rv = _BinOp(ARITHOP_AND, rv, _next());	break;
 			case TOK_OR:	rv = _BinOp(ARITHOP_OR,  rv, _next());	break;
+			case TOK_ADD:	rv = _BinOp(ARITHOP_ADD,  rv, _next());	break;
 			default:
 				Template_int_PutBack(Parser);
 				return rv;
@@ -715,7 +721,7 @@ t_tplop **Template_int_ParseStatement(t_parserstate *State, const char *Filename
 			{
 				t_tplmacro_param *param = NEW(t_tplmacro_param, + Parser->CurState.TokenLen-1 + 1);
 				memcpy(param->Name, Parser->CurState.TokenStr+1, Parser->CurState.TokenLen-1);
-				param->Name[Parser->CurState.TokenLen] = '\0';
+				param->Name[Parser->CurState.TokenLen-1] = '\0';
 				macro->Params_End->Next = param;
 				macro->Params_End = param;
 			}
