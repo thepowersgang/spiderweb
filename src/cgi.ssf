@@ -115,17 +115,16 @@ const char	*gsCGI_SessionDir = "/tmp/spiderweb/sessions";
 
 @FUNCTION String ReadGET(String Name)
 @{
-	 int	 i;
-
 	CGI_ParseGETData();
 
-	for( i = 0; i < giCGI_GETNArgs; i ++ )
+	for( int i = 0; i < giCGI_GETNArgs; i ++ )
 	{
 		if( strncmp(gaCGI_GETArgs[i].Name, Name->Data, Name->Length) != 0 )
 			continue ;
 		if( strlen(gaCGI_GETArgs[i].Name) != Name->Length )
 			continue ;
 		
+//		printf("%s = '%.*s'\n", gaCGI_GETArgs[i].Name, gaCGI_GETArgs[i].DataLen, gaCGI_GETArgs[i].Data);
 		@RETURN SpiderScript_CreateString(gaCGI_GETArgs[i].DataLen, gaCGI_GETArgs[i].Data);
 	}
 
