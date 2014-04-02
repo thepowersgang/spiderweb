@@ -11,6 +11,7 @@ USE_MYSQL ?= yes
 USE_SQLITE ?= yes
 
 EXPORT_FILES := misc.ssf template/object.ssf fileio.ssf cgi.ssf
+EXPORT_FILES += json.ssf
 EXPORT_FILES += sql.ssf
 
 CPPFLAGS += -I .. -I .

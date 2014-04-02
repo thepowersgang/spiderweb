@@ -1,0 +1,340 @@
+/*
+ * SpiderWeb Scripting Suite
+ * - By John Hodge (thePowersGang)
+ *
+ * json.ssf
+ * - JSON (De)serialisation
+ */
+#include <stdio.h>
+#include <string.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <inttypes.h>
+
+typedef struct
+{
+	enum {
+		JSON_UNPOP,
+		JSON_SUBOBJ,
+		JSON_STRING,
+		JSON_INTEGER,
+		JSON_REAL,
+	} Type;
+	const tSpiderString	*Key;
+	union {
+		const tSpiderObject	*SubObj;
+		const tSpiderString	*String;
+		tSpiderInteger	Integer;
+		tSpiderReal	Real;
+	};
+} t_item;
+
+typedef struct
+{
+	bool	IsArray;
+	bool	IsSorted;	// cleared on insert
+	
+	 int	nItems;
+	 int	nItemsAlloc;
+	t_item	*Items;
+} t_obj;
+
+static int _compare_items(const void *ptr1, const void *ptr2)
+{
+	const t_item	*item1 = ptr1;
+	const t_item	*item2 = ptr2;
+	return SpiderScript_StringCompare(item1->Key, item2->Key);
+}
+
+static t_item *_expand(t_obj *obj, const tSpiderString *str)
+{
+	if( obj->nItems == obj->nItemsAlloc )
+	{
+		// Expand list
+		// TODO: Thread safety
+		const int inc = 10;
+		obj->nItemsAlloc += inc;
+		void *newalloc = realloc(obj->Items, obj->nItemsAlloc*sizeof(t_item));
+		if( newalloc == NULL ) {
+			obj->nItemsAlloc -= inc;
+			return NULL;
+		}
+		obj->Items = newalloc;
+	}
+	t_item *ret = &obj->Items[obj->nItems];
+	memset(ret, 0, sizeof(*ret));
+	obj->nItems ++;
+	return ret;
+}
+
+static t_item *_lookup_str(t_obj *obj, const tSpiderString *str, bool alloc)
+{
+	t_item *ret;
+	t_item key = {.Key = str};
+	// 1. Search (linear or binary)
+	if( obj->IsSorted )
+	{
+		// Binary search
+		ret = bsearch(&key, obj->Items, obj->nItems, sizeof(t_item), _compare_items);
+		if( ret )
+			return ret;
+	}
+	else
+	{
+		// Linear search
+		for( int i = 0; i < obj->nItems; i ++ )
+		{
+			if( _compare_items(&obj->Items[i], &key) == 0 )
+				return &obj->Items[i];
+		}
+	}
+	// 2. If not found, check alloc
+	if( alloc )
+	{
+		obj->IsSorted = false;
+		ret =  _expand(obj, str);
+		SpiderScript_ReferenceString(str);
+		ret->Key = str;
+		return ret;
+	}
+	return NULL;
+}
+
+static t_item *_lookup_idx(t_obj *obj, int index, bool alloc)
+{
+	if( index >= 0 && index != obj->nItems )
+	{
+		if(index > obj->nItems)
+			return NULL;
+		
+		return &obj->Items[index];
+	}
+	
+	if( alloc )
+	{
+		// Index is either -ve or equal to length, add on to end
+		// - IsSorted is unused for arrays
+		return _expand(obj, NULL);
+	}
+	return NULL;
+}
+
+static int _lookup(t_item **itemp, tSpiderScript *Script,  t_obj *info, tSpiderTypeRef type, const void *arg, bool alloc)
+{
+	tSpiderTypeRef	exp_type = {0};
+	exp_type.Def = (info->IsArray ? &gSpiderScript_IntegerType : &gSpiderScript_StringType );
+	
+	if( !SS_TYPESEQUAL(type, exp_type) )
+		return SpiderScript_ThrowException_ArgError(Script, 
+			"JSON", "_lookup", 0, exp_type, type
+			);
+
+	t_item	*item;
+	if( info->IsArray ) {
+		// @TYPEOF(Index) == Integer
+		item = _lookup_idx( info, *(const tSpiderInteger*)arg, alloc );
+	}
+	else {
+		// @TYPEOF(Key) == String
+		if(!arg)
+			return SpiderScript_ThrowException_NullRef(Script, "JSON._lookup");
+		item = _lookup_str( info, (const tSpiderString*)arg, alloc );
+	}
+	
+	*itemp = item;
+	
+	return 0;
+}
+
+static void _clear_item(t_item *item)
+{
+	if(item->Key) {
+		SpiderScript_DereferenceString(item->Key);
+		item->Key = NULL;
+	}
+	switch(item->Type)
+	{
+	case JSON_SUBOBJ:
+		SpiderScript_DereferenceObject(item->SubObj);
+		break;
+	case JSON_STRING:
+		SpiderScript_DereferenceString(item->String);
+		break;
+	case JSON_UNPOP:
+	case JSON_INTEGER:
+	case JSON_REAL:
+		break;
+	}
+	item->Type = JSON_UNPOP;
+}
+
+@CLASS JSON
+@{
+	@CONSTRUCTOR (Boolean IsArray)
+	@{
+		t_obj	*info;
+		tSpiderObject	*this = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(*info));
+		if(!this)	return SpiderScript_ThrowException(Script, SS_EXCEPTION_MEMORY, "Object allocation failure");
+		info = this->OpaqueData;
+		info->IsArray = IsArray;
+		
+		@RETURN this;
+	@}
+	
+	@DESTRUCTOR
+	@{
+		// Free all entries
+	@}
+
+	@FUNCTION void Delete(* Index)
+	@{
+		// TODO: 
+		t_obj	*info = this->OpaqueData;
+		for( int i = 0; i < info->nItems; i ++ )
+			_clear_item(&info->Items[i]);
+	@}
+	
+	@FUNCTION void SetSubobj(* Index, JSON Item)
+	@{
+		 int	rv;
+		t_obj	*info = this->OpaqueData;
+		t_item	*item;
+		
+		rv = _lookup(&item, Script, info, @TYPEOF(Index), Index, true);
+		if(rv)	return rv;
+		
+		if(item->Type != JSON_UNPOP)
+			@RETURN;
+		
+		SpiderScript_ReferenceObject(Item);
+		item->Type = JSON_SUBOBJ;
+		item->SubObj = Item;
+	@}
+	
+	@FUNCTION void SetString(* Index, String Item)
+	@{
+		 int	rv;
+		t_obj	*info = this->OpaqueData;
+		t_item	*item;
+		
+		rv = _lookup(&item, Script, info, @TYPEOF(Index), Index, true);
+		if(rv)	return rv;
+		
+		if(item->Type != JSON_UNPOP)
+			@RETURN;
+		
+		SpiderScript_ReferenceString(Item);
+		item->Type = JSON_STRING;
+		item->String = Item;
+	@}
+	
+	@FUNCTION void SetInteger(* Index, Integer Item)
+	@{
+		 int	rv;
+		t_obj	*info = this->OpaqueData;
+		t_item	*item;
+		
+		rv = _lookup(&item, Script, info, @TYPEOF(Index), Index, true);
+		if(rv)	return rv;
+		
+		if(item->Type != JSON_UNPOP)
+			@RETURN;
+		
+		item->Type = JSON_INTEGER;
+		item->Integer = Item;
+	@}
+
+	static void _print_tree(FILE *stream, const t_obj *info);
+
+	static void _print_string(FILE *stream, const tSpiderString *String)
+	{
+		if( memchr(String->Data, '"', String->Length)
+		 || memchr(String->Data, '\\', String->Length)
+		 || memchr(String->Data, '\0', String->Length) )
+		{
+			fprintf(stream, "\"");
+			for(int i = 0; i < String->Length; i ++) {
+				char ch = String->Data[i];
+				if( ch == '\0' )
+					fprintf(stream, "\\0");
+				else {
+					if(ch == '"' || ch == '\\')
+						fprintf(stream, "\\");
+					fprintf(stream, "%c", ch);
+				}
+			}
+			fprintf(stream, "\"");
+		}
+		else {
+			fprintf(stream, "\"%.*s\"", (int)String->Length, String->Data);
+		}
+	}
+	static void _print_item(FILE *stream, const t_item *item)
+	{
+		switch(item->Type)
+		{
+		case JSON_UNPOP:
+			fprintf(stream, "undefined");
+			break;
+		case JSON_INTEGER:
+			fprintf(stream, "%"PRIi64, item->Integer);
+			break;
+		case JSON_REAL:
+			fprintf(stream, "%lf", item->Real);
+			break;
+		case JSON_STRING:
+			_print_string(stream, item->String);
+			break;
+		case JSON_SUBOBJ:
+			_print_tree(stream, (item->SubObj)->OpaqueData);
+			break;
+		}
+	}
+	
+	static void _print_tree(FILE *stream, const t_obj *info)
+	{
+		if( info->IsArray ) {
+			fprintf(stream, "[");
+			for( int i = 0; i < info->nItems; i ++ ) {
+				if(i>0)	fprintf(stream, ",");
+				_print_item(stream, &info->Items[i]);
+			}
+			fprintf(stream, "]");
+		}
+		else {
+			fprintf(stream, "{");
+			for( int i = 0; i < info->nItems; i ++ ) {
+				if(i>0)	fprintf(stream, ",");
+				_print_string(stream, info->Items[i].Key);
+				fprintf(stream, ":");
+				_print_item(stream, &info->Items[i]);
+			}
+			fprintf(stream, "}");
+		}
+	}
+	
+	@FUNCTION String ToString()
+	@{
+		@RETURN NULL;
+	@}
+	
+	@FUNCTION void ToOutput()
+	@{
+		t_obj	*info = this->OpaqueData;
+		_print_tree(stdout, info);
+	@}
+@}
+
+@NAMESPACE JSON
+@{
+
+// TODO: Stream version? That needs input streams
+@FUNCTION JSON Deserialise(String Input)
+@{
+	@RETURN NULL;
+@}
+
+@}	// NAMESPACE JSON
+
+// vim: ft=c
+
