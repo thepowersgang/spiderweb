@@ -38,10 +38,9 @@ if( CGI.ReadPOST("username") !== null )
 	// $lPassword = Crypto.MD5($lPassword);
 	
 	String $query = "SELECT `uid`,`magic` FROM `users`"
-		+" WHERE `username`='"+$dbconn->Escape($lUsername)+"'"
-		+" AND `password`=UNHEX(MD5('"+$dbconn->Escape($lPassword)+"'))"
+		+" WHERE `username`=?' AND `password`=UNHEX(MD5(?))"
 		+" LIMIT 1";
-	SpiderWeb.MySQL.Result $r = $dbconn->Query($query);
+	SpiderWeb.MySQL.Result $r = $dbconn->Query($query, $lUsername, $lPassword);
 	if( $r === null ) {
 		$tpl->Assign("SQLQuery", $query);
 		$tpl->Assign("SQLError", $dbconn->LastErrorString());
@@ -55,8 +54,9 @@ if( CGI.ReadPOST("username") !== null )
 		$gUserID = (Integer)$row[0];
 		$gUserName = $lUsername;
 		String $token = RandString(12);
-		String $q = "UPDATE users SET `token`='"+$dbconn->Escape($token)+"',`token_age`=NOW() WHERE uid="+$gUserID+" LIMIT 1";
-		if( $dbconn->Query($q) === null ) {
+		String $q = "UPDATE users SET `token`=?,`token_age`=NOW() WHERE uid=? LIMIT 1";
+		if( $dbconn->Query($q, $token, $gUserID) === null )
+		{
 			$tpl->Assign("SQLQuery", $q);
 			$tpl->Assign("SQLError", $dbconn->LastErrorString());
 			$tpl->Display("templates/sqlerror.tpl");

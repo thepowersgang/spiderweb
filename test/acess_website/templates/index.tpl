@@ -1,3 +1,4 @@
+{include "header.tpl"}
  <div class="raised">
   <center><b>Quick Intro</b></center>
   Acess is a POSIX based (not fully compatable, due to some design
@@ -16,3 +17,4 @@
 
 {include "bloglist.tpl"}
 
+{include "footer.tpl"}

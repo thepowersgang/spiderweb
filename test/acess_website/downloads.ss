@@ -92,9 +92,9 @@ if( $lRequestedRelease === null )
 
 	// Load the description for each previous release
 	Lang.StringMap[] $lPreviousReleases ($nReleases);
-	for( Integer $i = 0; $i < $nReleases; $i ++ )
+	for( $releases : $i, $release_id )
 	{
-		$lPreviousReleases[$i] = _loadRelease( $releases[$i] );
+		$lPreviousReleases[$i] = _loadRelease( $release_id );
 	}
 	$tpl->Assign("lPreviousReleases", $lPreviousReleases);
 	
