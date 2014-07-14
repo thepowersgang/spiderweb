@@ -42,4 +42,5 @@ for($case = 1; $case <= $test_case_count; $case ++ )
 }
 
 #?>
+# vim: ft=php
 

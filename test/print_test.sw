@@ -124,6 +124,27 @@ $fval = 12.0 + 11;
 
 //IO.Print("%i %i %i\n" % (1, 2, 3));
 
+//namespace Lang
+//{
+	class Format
+	{
+		void __constructor(String $fmt)
+		{
+		}
+		
+		Format operator %(String $str)
+		{
+			return $this;
+		}
+		Format operator %(Integer $int)
+		{
+			return $this;
+		}
+	}
+//}
+
+String $formatted_string = new /*Lang.*/Format("Str %s int %i") % "hello" % 13;
+
 // Test global return value
 return 20;
 
