@@ -18,18 +18,15 @@
 
 @CONSTRUCTOR ()
 @{
-	tSpiderObject	*ret;
-	t_obj_Template	*info;
+	tSpiderObject *ret = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(t_obj_Template));
+	if(!ret)	return NULL;	// TODO: Exception
 	
-	ret = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(t_obj_Template));
-	if(!ret)	@RETURN NULL;	// TODO: Exception
-	
-	info = ret->OpaqueData;
+	t_obj_Template	*info = ret->OpaqueData;
 	info->Script = Script;
 	info->ValueMap.FirstEnt = NULL;
 	info->IteratorValues.FirstEnt = NULL;
 	
-	@RETURN ret;
+	return ret;
 @}
 
 @DESTRUCTOR
@@ -46,12 +43,14 @@
 
 int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSpiderTypeRef ValueType, const void *ValuePtr)
 {
+	 int	rv;
+	//printf("ValuePtr = %p, ValueType={%p,%i} %s\n", ValuePtr,
+	//	ValueType.Def, ValueType.ArrayDepth, SpiderScript_GetTypeName(Script, ValueType));
 	if( !ValuePtr )
 		return 0;
 	
 	if( SS_GETARRAYDEPTH(ValueType) )
 	{
-		 int	i;
 		tSpiderTypeRef	type = ValueType;
 		type.ArrayDepth --;
 
@@ -61,11 +60,13 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSp
 		const tSpiderArray	*array = ValuePtr;
 		t_map_entry *submap = Template_int_AddMapItem_SubMap( Map, Key );
 		
-		for( i = 0; i < array->Length; i ++ )
+		//printf("array->Length = %zi\n", array->Length);
+		for( int i = 0; i < array->Length; i ++ )
 		{
 			char	key[10];
 			snprintf(key, 10, "%i",i);
-			Template_int_AddItem(Script, &submap->SubMap, key, type, SpiderScript_GetArrayPtr(array, i));
+			rv = Template_int_AddItem(Script, &submap->SubMap, key, type, SpiderScript_GetArrayPtr(array, i));
+			if(rv)	return rv;
 		}
 	}
 	else if( SS_TYPESEQUAL(ValueType, @TYPECODE(Lang.StringMap)) )
@@ -73,21 +74,22 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSp
 		tSpiderArray	*keys;
 		tSpiderString	*val;
 		tSpiderTypeRef	rettype;
-		 int	rv, i;
 
 		if( !ValuePtr )
 			return SpiderScript_ThrowException_NullRef(Script, "Template::AddItem - StringMap");
 	
 		// Call the ->keys() method (with the `this` parameter)	
 		rv = SpiderScript_ExecuteMethod(Script, "keys", &rettype, &keys, 1, &ValueType, &ValuePtr, NULL);
+		//printf("StringMap ::keys() rv=%i\n", rv);
 		if(rv != 0)
 			return -1;	// Oops?
-		if( !SS_TYPESEQUAL(rettype, @TYPECODE(String[])) )
+		if( !SS_TYPESEQUAL(rettype, @TYPECODE(String[])) ) {
 			return -1;
+		}
 		
 		t_map_entry *submap = Template_int_AddMapItem_SubMap( Map, Key );
 		
-		for( i = 0; i < keys->Length; i ++ )
+		for( int i = 0; i < keys->Length; i ++ )
 		{
 			tSpiderTypeRef	types[] = {ValueType, @TYPECODE(String)};
 			const void	*args[] = {ValuePtr, keys->Strings[i]};
@@ -105,8 +107,8 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSp
 	{
 		tSpiderString	*str = SpiderScript_CastValueToString(ValueType, ValuePtr);
 		if( str == NULL ) {
-			// TODO: Throw exception
-			return -1;
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC, "Type '%s' can't be passed to template",
+				SpiderScript_GetTypeName(Script, ValueType));
 		}
 		Template_int_AddMapItem_String(Map, Key, str->Length, str->Data);
 		SpiderScript_DereferenceString(str);
@@ -176,9 +178,7 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSp
 
 	if( !Key )	return SpiderScript_ThrowException_NullRef(Script, "Template.Assign - Key");
 
-	Template_int_AddItem(Script, &info->ValueMap, Key->Data, @TYPEOF(Value), Value );
-	
-	@RETURN;
+	return Template_int_AddItem(Script, &info->ValueMap, Key->Data, @TYPEOF(Value), Value );
 @}
 
 @FUNCTION void Clear(String Key)
@@ -201,8 +201,9 @@ int Template_int_AddItem(tSpiderScript *Script, t_map *Map, const char *Key, tSp
 	tpl_data = Template_int_Load(tpl_name->Data);
 	if( !tpl_data )
 	{
-		return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC, "Unable to find template %p %zi'%.*s'\n",
-			tpl_name, tpl_name->Length, tpl_name->Length, tpl_name->Data);
+		return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
+			"Unable to find template %zi'%.*s'\n",
+			tpl_name->Length, (int)tpl_name->Length, tpl_name->Data);
 	}
 	else
 	{

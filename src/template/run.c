@@ -25,19 +25,29 @@ int Template_int_RunSec_Arith(t_obj_Template *State, struct s_tplop_arith *Arith
 	switch(Arith->Operation)
 	{
 	case ARITHOP_CMPEQ:
-		lt = Template_int_RunSec(State, Arith->Left, &lv);
-		rt = Template_int_RunSec(State, Arith->Right, &rv);
-		if( lt != MAPENT_STRING && lt != rt )	return 0;
-		if( strcmp(lv, rv) != 0 )	return 0;
-		*ValuePtr = "true";
-		return MAPENT_STRING;
-	
 	case ARITHOP_CMPNE:
+	case ARITHOP_CMPLT:
 		*ValuePtr = "true";
 		lt = Template_int_RunSec(State, Arith->Left, &lv);
 		rt = Template_int_RunSec(State, Arith->Right, &rv);
-		if( lt != MAPENT_STRING && lt != rt )	return MAPENT_STRING;
-		if( strcmp(lv, rv) != 0 )	return MAPENT_STRING;
+		switch(Arith->Operation)
+		{
+		case ARITHOP_CMPEQ:
+			if( lt != MAPENT_STRING && lt == rt )	return MAPENT_STRING;
+			if( strcmp(lv, rv) == 0 )	return MAPENT_STRING;
+			break;
+		case ARITHOP_CMPNE:
+			if( lt != MAPENT_STRING && lt != rt )	return MAPENT_STRING;
+			if( strcmp(lv, rv) != 0 )	return MAPENT_STRING;
+			break;
+		case ARITHOP_CMPLT:
+			if( lt != MAPENT_STRING && lt < rt )	return MAPENT_STRING;
+			if( strcmp(lv, rv) < 0 )	return MAPENT_STRING;
+			break;
+		default:
+			fprintf(stderr, "Template Error: Unimplimented Arith BinOp %i\n", Arith->Operation);
+			break;
+		}
 		*ValuePtr = NULL;
 		return 0;
 	

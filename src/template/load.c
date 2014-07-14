@@ -45,7 +45,7 @@ enum eTokens
 
 	TOK_NOT,
 	TOK_AND, TOK_OR,
-	TOK_ADD,
+	TOK_ADD, TOK_MINUS,
 	TOK_CMPEQ, TOK_CMPNE,
 	TOK_CMPLE, TOK_CMPLT,
 	TOK_CMPGE, TOK_CMPGT,
@@ -114,6 +114,9 @@ int Template_int_GetToken(tParser *Parser)
 	//case '+':
 	//	rv = TOK_ADD;
 	//	break;
+	case '-':
+		rv = TOK_MINUS;
+		break;
 	case '$':	// Variable
 		while( issymchar(Parser->CurState.Pos[len]) )
 			len ++;
@@ -410,7 +413,8 @@ t_tplop *Template_int_ParseExpr(tParser *Parser)
 			{
 			case TOK_AND:	rv = _BinOp(ARITHOP_AND, rv, _next());	break;
 			case TOK_OR:	rv = _BinOp(ARITHOP_OR,  rv, _next());	break;
-			case TOK_ADD:	rv = _BinOp(ARITHOP_ADD,  rv, _next());	break;
+			case TOK_ADD:	rv = _BinOp(ARITHOP_ADD, rv, _next());	break;
+			case TOK_MINUS:	rv = _BinOp(ARITHOP_SUB, rv, _next());	break;
 			default:
 				Template_int_PutBack(Parser);
 				return rv;
