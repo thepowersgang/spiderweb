@@ -31,7 +31,7 @@ int gi_mysql_object_count = 0;
 	@{
 		t_db_obj	*info;
 		tSpiderObject	*this = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(*info));
-		if(!this)	@RETURN NULL;
+		if(!this)	return NULL;
 		info = this->OpaqueData;
 		
 		gi_mysql_object_count ++;
@@ -39,9 +39,7 @@ int gi_mysql_object_count = 0;
 		MYSQL	*rv = mysql_init(&info->Handle);
 		if(!rv) {
 			SpiderScript_DereferenceObject(this);
-			return SpiderScript_ThrowException(Script, SS_EXCEPTION_BUG,
-				"mysql_init failed");
-			@RETURN NULL;
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_BUG, "mysql_init failed"), NULL;
 		}
 	
 		// TODO: Parse server to allow different ports
@@ -51,10 +49,10 @@ int gi_mysql_object_count = 0;
 			// TODO: Use a better exception ID
 			return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC,
 				"unable to connect to %.*s (username '%.*s', password yes)",
-				Server->Length, Server->Data, Username->Length, Username->Data);
+				Server->Length, Server->Data, Username->Length, Username->Data), NULL;
 		}
 		
-		@RETURN this;
+		return this;
 	@}
 	
 	@DESTRUCTOR
@@ -153,11 +151,11 @@ int gi_mysql_object_count = 0;
 		// TODO: Somehow determine if the script constructed this?
 		t_result_obj	*info;
 		tSpiderObject	*ret = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(*info));
-		if(!ret)	@RETURN NULL;
+		if(!ret)	return NULL;
 		info = ret->OpaqueData;
 		info->nRows = 0;
 		info->res = NULL;
-		@RETURN ret;
+		return ret;
 	@}
 	
 	@DESTRUCTOR

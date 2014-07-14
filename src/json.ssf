@@ -174,26 +174,49 @@ static void _clear_item(t_item *item)
 	@{
 		t_obj	*info;
 		tSpiderObject	*this = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(*info));
-		if(!this)	return SpiderScript_ThrowException(Script, SS_EXCEPTION_MEMORY, "Object allocation failure");
+		if(!this)	return SpiderScript_ThrowException(Script, SS_EXCEPTION_MEMORY, "Object allocation failure"), NULL;
 		info = this->OpaqueData;
 		info->IsArray = IsArray;
 		
-		@RETURN this;
+		return this;
 	@}
 	
 	@DESTRUCTOR
 	@{
 		// Free all entries
+		t_obj	*info = this->OpaqueData;
+		for( int i = 0; i < info->nItems; i ++ )
+			_clear_item(&info->Items[i]);
 	@}
 
 	@FUNCTION void Delete(* Index)
 	@{
+		(void)Index;
 		// TODO: 
 		t_obj	*info = this->OpaqueData;
 		for( int i = 0; i < info->nItems; i ++ )
 			_clear_item(&info->Items[i]);
 	@}
-	
+
+	@FUNCTION JSON GetSubobj(* Index)
+	@{
+		(void)Index;
+		 int	rv;
+		t_obj	*info = this->OpaqueData;
+		t_item	*item;
+		
+		rv = _lookup(&item, Script, info, @TYPEOF(Index), Index, false);
+		if(rv)	return rv;
+		
+		if( !item )
+			@RETURN NULL;
+		// TODO: Exception if wrong type?
+		if(item->Type != JSON_SUBOBJ)
+			@RETURN NULL;
+		SpiderScript_ReferenceObject(item->SubObj);
+		@RETURN item->SubObj;
+	@}
+
 	@FUNCTION void SetSubobj(* Index, JSON Item)
 	@{
 		 int	rv;
@@ -213,13 +236,17 @@ static void _clear_item(t_item *item)
 	
 	@FUNCTION void SetString(* Index, String Item)
 	@{
+		(void)Index;
 		 int	rv;
 		t_obj	*info = this->OpaqueData;
 		t_item	*item;
 		
 		rv = _lookup(&item, Script, info, @TYPEOF(Index), Index, true);
 		if(rv)	return rv;
-		
+	
+		if(!item)
+			return SpiderScript_ThrowException(Script, SS_EXCEPTION_GENERIC, "Key out of range");	
+	
 		if(item->Type != JSON_UNPOP)
 			@RETURN;
 		
@@ -313,10 +340,10 @@ static void _clear_item(t_item *item)
 		}
 	}
 	
-	@FUNCTION String ToString()
-	@{
-		@RETURN NULL;
-	@}
+	//@FUNCTION String ToString()
+	//@{
+	//	@RETURN NULL;
+	//@}
 	
 	@FUNCTION void ToOutput()
 	@{
@@ -329,10 +356,10 @@ static void _clear_item(t_item *item)
 @{
 
 // TODO: Stream version? That needs input streams
-@FUNCTION JSON Deserialise(String Input)
-@{
-	@RETURN NULL;
-@}
+//@FUNCTION JSON Deserialise(String Input)
+//@{
+//	@RETURN NULL;
+//@}
 
 @}	// NAMESPACE JSON
 

@@ -77,13 +77,12 @@ const char	*gsCGI_SessionDir = "/tmp/spiderweb/sessions";
 
 	 int	nlen = CGI_int_URLEncode(Name->Data, Name->Length, NULL);
 	 int	vlen = CGI_int_URLEncode(Value->Data, Value->Length, NULL);
-	 int	tlen = strftime(NULL, 0, "%a, %d %b %Y %H:%M:%S %Z", ts);
 	char	name[nlen+1];
 	char	value[vlen+1];
-	char	timeout[tlen+1];
 	CGI_int_URLEncode(Name->Data, Name->Length, name); name[nlen] = '\0';
 	CGI_int_URLEncode(Value->Data, Value->Length, value); value[vlen] = '\0';
-	strftime(timeout, tlen+1, "%a, %d %b %Y %H:%M:%S %Z", ts);
+	char	timeout[80] = {0};
+	strftime(timeout, sizeof(timeout), "%a, %d %b %Y %H:%M:%S %Z", ts);
 
 
 	// Name and value need to be URI encoded
@@ -206,11 +205,11 @@ const char	*gsCGI_SessionDir = "/tmp/spiderweb/sessions";
 		
 		// Length sanity check
 		if( strnlen(Tag->Data, Tag->Length) != Tag->Length ) {
-			@RETURN NULL;
+			return NULL;
 		}
 		// Content sanity
 		if( memchr(Tag->Data, '/', Tag->Length) != NULL ) {
-			@RETURN NULL;
+			return NULL;
 		}
 
 		// Get length of session path
@@ -225,7 +224,7 @@ const char	*gsCGI_SessionDir = "/tmp/spiderweb/sessions";
 		// Create object
 		t_session_info *info;
 		tSpiderObject *this = SpiderScript_AllocateObject(Script, @CLASSPTR, sizeof(*info) + pathlen);
-		if( !this )	return -1;
+		if( !this )	return NULL;
 		info = this->OpaqueData;
 		info->Values = NULL;
 		info->Hash = Hash;
@@ -246,7 +245,7 @@ const char	*gsCGI_SessionDir = "/tmp/spiderweb/sessions";
 
 		// TODO: Load from a file
 
-		@RETURN this;
+		return this;
 	@}
 	
 	@DESTRUCTOR
