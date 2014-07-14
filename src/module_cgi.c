@@ -296,7 +296,7 @@ void CGI_SendHeadersOnce(void)
 	if( gbCGI_HeadersSent )
 		return ;
 
-	printf("Content-Type: text/html\n");
+	printf("Content-Type: text/html; charset=utf-8\n");
 	printf("\n");
 
 	gbCGI_HeadersSent = 1;

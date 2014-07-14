@@ -35,7 +35,7 @@ OBJ := $(addprefix $(OBJDIR),$(OBJ))
 OBJ := $(OBJ:%=obj/%)
 DEPFILES := $(OBJ:%.o=%.d)
 
-GENSFCNS := ../libspiderscript/tools/gen_scriptfcns.pl
+GENSFCNS := ../libspiderscript/tools/gen_scriptfcns.py
 
 .PHONY: all clean install
 
@@ -52,15 +52,15 @@ $(BIN): $(OBJ)
 
 types.gen.h: $(EXPORT_FILES) $(GENSFCNS)
 	@mkdir -p $(dir $@)
-	perl $(GENSFCNS) --mkhdr $@ $(EXPORT_FILES)
+	$(GENSFCNS) -M mkhdr -o $@ $(EXPORT_FILES)
 
 .exports/_index.c: $(EXPORT_FILES) types.gen.h $(GENSFCNS)
 	@mkdir -p $(dir $@)
-	perl $(GENSFCNS) -H types.gen.h --mkidx $@ $(EXPORT_FILES)
+	$(GENSFCNS) -H types.gen.h -M index -o $@ $(EXPORT_FILES)
 
 .exports/%.c: %.ssf types.gen.h $(GENSFCNS)
 	@mkdir -p $(dir $@)
-	perl $(GENSFCNS) -H types.gen.h $@ $<
+	$(GENSFCNS) -H types.gen.h -o $@ $<
 
 obj/%.o: %.c
 	@mkdir -p $(dir $@)
