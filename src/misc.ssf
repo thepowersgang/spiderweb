@@ -44,6 +44,19 @@
 @NAMESPACE IO
 @{
 
+@FUNCTION String GetEnv(String name)
+@{
+	const char *var = getenv(name->Data);
+	if( var )
+	{	
+		@RETURN SpiderScript_CreateString(strlen(var), var);
+	}
+	else
+	{
+		@RETURN NULL;
+	}
+@}
+
 /**
  * \brief Sets a template parameter
  */

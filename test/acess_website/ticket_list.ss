@@ -6,8 +6,8 @@ include "tickets_common.inc.ss";
 $tpl->Assign("PageID", "bugs");
 $tpl->Assign("PageTitle", "Issue List");
 
-String $query = "SELECT ticket_id,ticket_title,ticket_filer,ticket_type,ticket_status,ticket_opened,ticket_owner FROM tickets"
-	+" WHERE 1=1";
+String $query = "SELECT ticket_id,ticket_title,ticket_filer,ticket_type,ticket_status,ticket_opened,ticket_owner"
+	+" FROM tickets WHERE 1=1";
 String $lProject = CGI.GetPathInfo(0) ?: CGI.ReadGET("prj") ?: null;
 String $lType = CGI.GetPathInfo(1) ?: CGI.ReadGET("type") ?: null;
 if( $lProject )
@@ -42,10 +42,8 @@ if( $res === null ) {
 	return 0;
 }
 
-Lang.StringMap[]	$tickets($res->ResultCount());
-String[]	$row;
-
-for(Integer $i = 0; ($row = $res->GetNextRow()) !== null; $i++)
+Lang.StringMap[]	$tickets = new($res->ResultCount());
+for(Integer $i = 0; auto $row = $res->GetNextRow(); $i++)
 {
 	Lang.StringMap	$ticket();
 

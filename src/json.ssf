@@ -275,7 +275,11 @@ static void _clear_item(t_item *item)
 
 	static void _print_string(FILE *stream, const tSpiderString *String)
 	{
-		if( memchr(String->Data, '"', String->Length)
+		if( !String ) {
+			fprintf(stream, "null");
+		}
+		else if(
+		    memchr(String->Data, '"', String->Length)
 		 || memchr(String->Data, '\\', String->Length)
 		 || memchr(String->Data, '\0', String->Length) )
 		{
